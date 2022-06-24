@@ -1,38 +1,96 @@
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.form-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  align-items: center;
+  min-height: 100vh;
 }
 
-.App-link {
-  color: #61dafb;
+.form-wrapper {
+  display: flex;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.wallet-info-container {
+  text-align: right;
+  padding: 10px 0;
+  width: 100%;
+}
+
+.wallet-info {
+  font-size: 10px;
+  text-align: right;
+  margin: 0 5px;
+}
+
+.form-content-container {
+  width: 30vw;
+  position: relative;
+  padding: 15px 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0 5px;
+}
+
+.notify {
+  margin-top: 10px;
+  font-size: 10px;
+}
+
+.submit-button-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255,255,255,.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.loading {
+  height: 40%;
+}
+
+.withdraw-container {
+  display: flex;
+}
+
+.amount-input {
+  padding: 12px 20px;
+  text-align: right;
+  font-size: 24px;
+}
+
+.amount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.amount-number {
+  font-size: 18px;
+  color: #333;
+}
+
+.form-content-container .button-base {
+  font-size: 12px;
+  font-weight: 600;
+  width: 128px;
+  padding: 10px 30px;
+  text-transform: uppercase;
+  color: #3b3b3b;
+}
+
+#claim-btn {
+  margin-right: 10px;
 }
