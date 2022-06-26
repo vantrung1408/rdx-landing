@@ -4,7 +4,12 @@ import { ethers, BigNumber, Signer, utils, constants } from 'ethers'
 import { Input } from './components'
 import { Button } from './components/button/button'
 import { RDL, RDX, CHEF } from './contracts'
-import loading from './img/loading.gif'
+import loadingIcon from './img/loading.gif'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
+const DECIMAL_PRECISION = 12
+const DECIMAL_PRECISION_IN_UNIT = utils.parseUnits('1', DECIMAL_PRECISION)
 
 function App() {
   const [info, setInfo] = React.useState({
@@ -17,11 +22,14 @@ function App() {
     rdxDecimals: BigNumber.from(0),
   })
   const [form, setForm] = React.useState({
-    deposit: 0,
-    withdraw: 0,
+    deposit: '',
+    withdraw: '',
   })
-  const [depositing, setDepositing] = React.useState(true)
-  const [withdrawing, setWithdrawing] = React.useState(true)
+  const [isValid, setIsValid] = React.useState({
+    deposit: false,
+    withdraw: false,
+  })
+  const [loading, setLoading] = React.useState(false)
 
   React.useEffect(() => {
     loadInfo()
@@ -53,64 +61,96 @@ function App() {
   }
 
   const loadInfo = async () => {
-    setDepositing(true)
-    setWithdrawing(true)
+    try {
+      setLoading(true)
 
-    const signer = await requestSigner()
-    const address = await signer.getAddress()
-    //
-    const rdl = await getRDL()
-    const rdlDecimals: BigNumber = await rdl.decimals()
-    const rdlBalance: BigNumber = await rdl.balanceOf(address)
-    //
-    const rdx = await getRDX()
-    const rdxDecimals: BigNumber = await rdl.decimals()
-    const rdxBalance: BigNumber = await rdx.balanceOf(address)
-    //
-    const chef = await getChef()
-    const deposited = await chef.depositedBalance(address)
-    const pendingReward = await chef.rewardAmount(address)
-    // const pendingReward = BigNumber.from(0)
+      const signer = await requestSigner()
+      const address = await signer.getAddress()
+      //
+      const rdl = await getRDL()
+      const rdlDecimals: BigNumber = await rdl.decimals()
+      const rdlBalance: BigNumber = await rdl.balanceOf(address)
+      //
+      const rdx = await getRDX()
+      const rdxDecimals: BigNumber = await rdl.decimals()
+      const rdxBalance: BigNumber = await rdx.balanceOf(address)
+      //
+      const chef = await getChef()
+      const deposited = (await chef.users(address)).balance
+      const pendingReward = await chef.rewardAmount()
+      // const pendingReward = BigNumber.from(0)
 
-    setInfo({
-      deposited: deposited,
-      rdl: rdlBalance,
-      rdx: rdxBalance,
-      reward: pendingReward,
-      rdlDecimals: utils.parseUnits('1', rdlDecimals),
-      rdxDecimals: utils.parseUnits('1', rdxDecimals),
-      address,
+      setInfo({
+        deposited: deposited,
+        rdl: rdlBalance,
+        rdx: rdxBalance,
+        reward: pendingReward,
+        rdlDecimals: utils.parseUnits('1', rdlDecimals),
+        rdxDecimals: utils.parseUnits('1', rdxDecimals),
+        address,
+      })
+      // toast.success('Success to connect your wallet and get info')
+    } catch {
+      toast.error('Failed to connect your wallet')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onChangeValue = (
+    key: string,
+    value: number | '',
+    comperator: BigNumber
+  ) => {
+    setForm({
+      ...form,
+      [key]: value,
     })
-    setDepositing(false)
-    setWithdrawing(false)
+    let valid = false
+    if (value && info.address) {
+      try {
+        const parsedValue = info.rdlDecimals
+          .div(DECIMAL_PRECISION_IN_UNIT)
+          .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
+        valid = parsedValue.gt(0) && parsedValue.lte(comperator)
+      } catch (error) {
+        valid = false
+      }
+    }
+    setIsValid({
+      ...isValid,
+      [key]: valid,
+    })
   }
 
   const withdraw = async () => {
     try {
-      setWithdrawing(true)
-      const signer = await requestSigner()
-      const address = await signer.getAddress()
-      const value = form.withdraw
+      setLoading(true)
+      const value = info.rdlDecimals
+        .div(DECIMAL_PRECISION_IN_UNIT)
+        .mul(utils.parseUnits(form.withdraw, DECIMAL_PRECISION))
+      const chef = await getChef()
+      // withdraw
+      const tx = await chef.withdraw(value.toString())
+      await tx.wait()
+      await loadInfo()
+      toast.success(`Success, please check your RDL balance`)
     } catch (err) {
-      console.log(err)
+      toast.error('Failed, please try again later!')
     } finally {
-      setWithdrawing(false)
+      setLoading(false)
+      onChangeValue('withdraw', '', info.deposited)
     }
   }
 
   const deposit = async () => {
-    // const chef = await getChef()
     try {
-      setDepositing(true)
+      setLoading(true)
       const signer = await requestSigner()
       const address = await signer.getAddress()
-      const value = info.rdlDecimals.mul(form.deposit)
-
-      // validate
-      if (value.gt(info.rdl)) {
-        return
-      }
-
+      const value = info.rdlDecimals
+        .div(DECIMAL_PRECISION_IN_UNIT)
+        .mul(utils.parseUnits(form.deposit, DECIMAL_PRECISION))
       const chef = await getChef()
       const rdl = await getRDL()
       // approve
@@ -119,17 +159,36 @@ function App() {
         await rdl.approve(chef.address, constants.MaxUint256.toString())
       }
       // deposit
-      const tx = await chef.deposit(info.address, value.toString())
+      const tx = await chef.deposit(value.toString())
       await tx.wait()
-      setForm({
-        ...form,
-        deposit: 0,
-      })
       await loadInfo()
+      toast.success(`Success, please check your deposited balance`)
     } catch (err) {
-      console.log(err)
+      toast.error('Failed, please try again later!')
     } finally {
-      setDepositing(false)
+      setLoading(false)
+      onChangeValue('deposit', '', info.rdl)
+    }
+  }
+
+  const claim = async () => {
+    try {
+      setLoading(true)
+      const chef = await getChef()
+      // claim
+      const pendingReward = await chef.rewardAmount()
+      const tx = await chef.claim()
+      await tx.wait()
+      await loadInfo()
+      toast.success(
+        `Success, ${pendingReward
+          .div(info.rdxDecimals)
+          .toString()} RDX is transfered to your address`
+      )
+    } catch (err) {
+      toast.error('Failed, please try again later!')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -138,24 +197,33 @@ function App() {
       <div>
         <div className='wallet-info-container'>
           {info.address ? (
-            <label className='wallet-info'>
-              Connected to: {info.address.substring(0, 30)}... <br />
-              RDL Balance: {info.rdl.div(info.rdlDecimals).toString()} RDL{' '}
-              <br />
-              RDX Balance: {info.rdx.div(info.rdxDecimals).toString()} RDX
-            </label>
+            <>
+              <label className='wallet-info'>
+                Connected to: {info.address.substring(0, 30)}... <br />
+                {/* RDX Balance: {info.rdx.div(info.rdxDecimals).toString()} RDX<br /> */}
+              </label>
+              <label className='wallet-info'>
+                Pending reward: {info.reward.div(info.rdxDecimals).toString()}{' '}
+                RDX{' '}
+                {info.reward.div(info.rdxDecimals).gt(0) && (
+                  <label>(<a href='#' onClick={claim}>Claim</a>)</label>
+                )}
+              </label>
+            </>
           ) : (
-            <a>Connect wallet</a>
+            <a href='#' className='wallet-info' onClick={loadInfo}>
+              Please click here to connect your wallet and continue
+            </a>
           )}
         </div>
         <div className='form-wrapper'>
           <div className='form-content-container'>
             <label className='amount'>
-              Deposited:{' '}
+              Balance:{' '}
               <label className='amount-number'>
                 {info.rdlDecimals.eq(0)
                   ? '0'
-                  : info.deposited.div(info.rdlDecimals).toString()}
+                  : info.rdl.div(info.rdlDecimals).toString()}
               </label>{' '}
               RDL
             </label>
@@ -163,55 +231,51 @@ function App() {
               value={form.deposit}
               className='amount-input'
               placeholder='0.0'
-              onChange={(event: any) =>
-                setForm({
-                  deposit: event.target.value,
-                  withdraw: form.withdraw,
-                })
-              }
+              onChange={(event: any) => {
+                onChangeValue('deposit', event.target.value, info.rdl)
+              }}
             />
-            <Button type='button' value='Deposit' onClick={deposit} />
-            {depositing && (
-              <div className='loading-container'>
-                <img className='loading' src={loading} />
-                <label className='notify'>just a second...</label>
-              </div>
-            )}
+            <Button
+              disabled={!isValid.deposit}
+              type='button'
+              value='Deposit'
+              onClick={deposit}
+            />
           </div>
           <div className='form-content-container'>
             <label className='amount'>
-              Pending reward:{' '}
+              Deposited:
               <label className='amount-number'>
                 {info.rdxDecimals.eq(0)
                   ? '0'
-                  : info.reward.div(info.rdxDecimals).toString()}
+                  : info.deposited.div(info.rdxDecimals).toString()}
               </label>{' '}
-              RDX
+              RDL
             </label>
             <Input
               value={form.withdraw}
               className='amount-input'
               placeholder='0.0'
               onChange={(event: any) =>
-                setForm({
-                  withdraw: event.target.value,
-                  deposit: form.withdraw,
-                })
+                onChangeValue('withdraw', event.target.value, info.deposited)
               }
             />
-            <div className='withdraw-container'>
-              <Button type='button' value='Claim' id='claim-btn' />
-              <Button type='button' value='Withdraw' onClick={withdraw} />
-            </div>
-            {withdrawing && (
-              <div className='loading-container'>
-                <img className='loading' src={loading} />
-                <label className='notify'>just a second...</label>
-              </div>
-            )}
+            <Button
+              disabled={!isValid.withdraw}
+              type='button'
+              value='Withdraw'
+              onClick={withdraw}
+            />
           </div>
         </div>
       </div>
+      {loading && (
+        <div className='loading-container'>
+          <img className='loading' src={loadingIcon} />
+          <label className='notify'>just a second...</label>
+        </div>
+      )}
+      <ToastContainer />
     </div>
   )
 }

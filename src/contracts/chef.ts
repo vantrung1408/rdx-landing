@@ -1,5 +1,5 @@
 export const CHEF = {
-  address: '0xD02692064eB1130305a15f590835cfCFe4bb1F67',
+  address: '0xCaE9740E0538634008273c77f4e44571d1f49821',
   abi: [
     {
       "inputs": [
@@ -36,13 +36,7 @@ export const CHEF = {
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
+      "inputs": [],
       "name": "claim",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -51,13 +45,8 @@ export const CHEF = {
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "_amount",
           "type": "uint256"
         }
       ],
@@ -67,37 +56,38 @@ export const CHEF = {
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        }
-      ],
-      "name": "depositedBalance",
+      "inputs": [],
+      "name": "rdl",
       "outputs": [
         {
-          "internalType": "uint256",
-          "name": "balance",
-          "type": "uint256"
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
         }
       ],
       "stateMutability": "view",
       "type": "function"
     },
     {
-      "inputs": [
+      "inputs": [],
+      "name": "rdx",
+      "outputs": [
         {
-          "internalType": "address",
-          "name": "owner",
+          "internalType": "contract IERC20",
+          "name": "",
           "type": "address"
         }
       ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "rewardAmount",
       "outputs": [
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "",
           "type": "uint256"
         }
       ],
@@ -144,13 +134,8 @@ export const CHEF = {
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "owner",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "_amount",
           "type": "uint256"
         }
       ],

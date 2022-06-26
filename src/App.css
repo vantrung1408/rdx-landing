@@ -32,6 +32,7 @@
   flex-direction: column;
   align-items: flex-end;
   margin: 0 5px;
+  overflow: hidden;
 }
 
 .notify {
@@ -58,7 +59,7 @@
 }
 
 .loading {
-  height: 40%;
+  height: 10%;
 }
 
 .withdraw-container {
