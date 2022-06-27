@@ -156,7 +156,8 @@ function App() {
       // approve
       const allowance: BigNumber = await rdl.allowance(address, chef.address)
       if (allowance.lt(value)) {
-        await rdl.approve(chef.address, constants.MaxUint256.toString())
+        const tx = await rdl.approve(chef.address, constants.MaxUint256.toString())
+        await tx.wait()
       }
       // deposit
       const tx = await chef.deposit(value.toString())
