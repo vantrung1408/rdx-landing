@@ -192,6 +192,18 @@ function App() {
     }
   }
 
+  const formatCurrency = (value: BigNumber) => {
+    const str = value.toString()
+    const arr = []
+    for (let i = 0; i < str.length; i++) {
+      if (i && !((str.length - i) % 3)) {
+        arr.push(',')
+      }
+      arr.push(str[i])
+    }
+    return arr.join('')
+  }
+
   return (
     <div className='form-container'>
       <div>
@@ -203,10 +215,19 @@ function App() {
                 {/* RDX Balance: {info.rdx.div(info.rdxDecimals).toString()} RDX<br /> */}
               </label>
               <label className='wallet-info'>
-                Pending reward: {info.reward.div(info.rdxDecimals).toString()}{' '}
+                Pending reward:{' '}
+                <label className='number'>
+                  {formatCurrency(info.reward.div(info.rdxDecimals))}
+                </label>{' '}
                 RDX{' '}
                 {info.reward.div(info.rdxDecimals).gt(0) && (
-                  <label>(<a href='#' onClick={claim}>Claim</a>)</label>
+                  <label>
+                    (
+                    <a href='#' onClick={claim}>
+                      Claim
+                    </a>
+                    )
+                  </label>
                 )}
               </label>
             </>
@@ -220,16 +241,16 @@ function App() {
           <div className='form-content-container'>
             <label className='amount'>
               Balance:{' '}
-              <label className='amount-number'>
+              <label className='amount-number number'>
                 {info.rdlDecimals.eq(0)
                   ? '0'
-                  : info.rdl.div(info.rdlDecimals).toString()}
+                  : formatCurrency(info.rdl.div(info.rdlDecimals))}
               </label>{' '}
               RDL
             </label>
             <Input
               value={form.deposit}
-              className='amount-input'
+              className='amount-input number'
               placeholder='0.0'
               onChange={(event: any) => {
                 onChangeValue('deposit', event.target.value, info.rdl)
@@ -244,17 +265,17 @@ function App() {
           </div>
           <div className='form-content-container'>
             <label className='amount'>
-              Deposited:
-              <label className='amount-number'>
+              Deposited:{' '}
+              <label className='amount-number number'>
                 {info.rdxDecimals.eq(0)
                   ? '0'
-                  : info.deposited.div(info.rdxDecimals).toString()}
+                  : formatCurrency(info.deposited.div(info.rdxDecimals))}
               </label>{' '}
               RDL
             </label>
             <Input
               value={form.withdraw}
-              className='amount-input'
+              className='amount-input number'
               placeholder='0.0'
               onChange={(event: any) =>
                 onChangeValue('withdraw', event.target.value, info.deposited)

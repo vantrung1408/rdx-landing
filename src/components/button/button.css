@@ -1,8 +1,12 @@
 .button-base {
   padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background-color: rgb(250, 133, 78);
 }
 
 .button-base:disabled {
-  color: #999;
+  color: #f1f1f1 !important;
   cursor: not-allowed;
+  background-color: rgb(243, 187, 142);
 }
