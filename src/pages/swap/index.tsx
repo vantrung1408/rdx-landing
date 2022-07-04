@@ -1,20 +1,20 @@
 import React from 'react'
 import ethIcon from '../../img/eth.png'
 import usdcIcon from '../../img/usdc.png'
-import plusIcon from '../../img/plus.png'
+import downArrowIcon from '../../img/down-arrow.png'
 import { AmountInput, Button } from '../../components'
 import { BigNumber } from 'ethers'
 import './index.css'
 
-export interface PoolProps {
+export interface SwapProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-export const Pool = (props: PoolProps) => {
+export const Swap = (props: SwapProps) => {
   const [amount, setAmount] = React.useState('')
   const [info, setInfo] = React.useState(0)
 
-  const supply = () => {}
+  const swap = () => {}
 
   return (
     <div className='pool form-container'>
@@ -30,7 +30,7 @@ export const Pool = (props: PoolProps) => {
             style={{ marginBottom: 0 }}
             showBalanceInfo
           />
-          <img className='plus-icon' src={plusIcon} />
+          <img className='arrow-icon' src={downArrowIcon} />
         </div>
         <AmountInput
           balance={BigNumber.from(100000)}
@@ -42,15 +42,13 @@ export const Pool = (props: PoolProps) => {
           showBalanceInfo
         />
         <div className='rate-container'>
-          <label className='rate-info'>Rate</label>
+          <label />
           <label className='rate-info'>
             <label className='number'>1</label> WETH ={' '}
             <label className='number'>1000</label> USDC
           </label>
         </div>
-        <Button type='button' value='Approve WETH' onClick={supply} />
-        <Button type='button' value='Approve USDC' onClick={supply} />
-        <Button type='button' value='Supply' onClick={supply} disabled={true} />
+        <Button type='button' value='Swap' onClick={swap} disabled={true} />
       </div>
     </div>
   )

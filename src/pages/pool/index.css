@@ -1,115 +1,40 @@
-.form-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  flex: 1;
+.pool .form-content-container {
+  width: 40vw;
 }
 
-.form-wrapper {
+.rate-container {
   display: flex;
-}
-
-.wallet-info-container {
-  text-align: right;
-  padding: 10px 0;
+  flex-direction: row;
+  justify-content: space-between;
   width: 100%;
-  color: #333;
-  font-weight: 600;
+  border-top: 1px dashed #666;
+  padding: 10px 0;
+  margin-top: 20px;
 }
 
-.wallet-info-container a {
-  font-weight: bold;
-  color: #333;
-}
-
-.wallet-info {
-  font-size: 10px;
-  text-align: right;
-  margin: 0 5px;
-}
-
-.wallet-info .number {
-  font-size: 12px;
-}
-
-.form-content-container {
-  width: 30vw;
-  position: relative;
-  padding: 15px 20px;
-  /* border: 1px solid #ccc; */
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  margin: 0 5px;
-  overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.75);
-}
-
-.notify {
-  margin-top: 10px;
-  font-size: 10px;
-}
-
-.submit-button-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.loading-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.75);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-}
-
-.loading {
-  height: 128px;
-}
-
-.withdraw-container {
-  display: flex;
-}
-
-.amount-input {
-  padding: 12px 20px;
-  text-align: right;
-  font-size: 24px;
-  border-radius: 6px;
-  border: none;
-}
-
-.amount {
+.rate-info {
   font-size: 12px;
   font-weight: 600;
   color: #666;
 }
 
-.number {
-  font-family: 'Coda';
-}
-
-.amount-number {
-  font-size: 18px;
+.rate-info .number {
+  font-size: 14px;
   color: #333;
 }
 
-.form-content-container .button-base {
-  font-size: 12px;
-  font-weight: 600;
-  width: 128px;
-  padding: 15px 30px;
-  text-transform: uppercase;
-  color: #3b3b3b;
+.pool-amount-input {
+  margin-bottom: 4px;
+  position: relative;
+  width: 100%;
 }
 
-#claim-btn {
-  margin-right: 10px;
+.plus-icon {
+  background-color: #fff;
+  /* border: 1px solid #ccc; */
+  border-radius: 999px;
+  height: 24px;
+  position: absolute;
+  bottom: -14px;
+  left: calc(50% - 12px);
 }

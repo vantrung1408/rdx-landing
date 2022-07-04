@@ -5,7 +5,7 @@ import loadingIcon from './img/loading.gif'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { Farm, Pool } from './pages'
+import { Farm, Pool, Swap } from './pages'
 
 function App() {
   const [loading, setLoading] = React.useState(false)
@@ -14,7 +14,7 @@ function App() {
     {
       title: 'Swap',
       link: '/',
-      element: <></>,
+      element: <Swap setLoading={setLoading} />,
     },
     {
       title: 'Farm',

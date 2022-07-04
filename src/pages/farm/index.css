@@ -96,3 +96,8 @@
 #claim-btn {
   margin-right: 10px;
 }
+
+.farm-amount-input {
+  margin: 20px 0;
+  width: 100%;
+}

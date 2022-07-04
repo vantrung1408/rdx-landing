@@ -192,7 +192,7 @@ export const Farm = (props: FarmProps) => {
   }
 
   return (
-    <div className='form-container'>
+    <div className='farm form-container'>
       <div>
         <div className='wallet-info-container'>
           {info.address ? (
@@ -235,16 +235,18 @@ export const Farm = (props: FarmProps) => {
               </label>{' '}
               RDL
             </label>
-            <AmountInput
-              balance={info.rdl}
-              decimals={info.rdlDecimals}
-              token={{ name: 'RDL' }}
-              value={form.deposit}
-              placeholder='0.0'
-              onChange={(value) => {
-                onChangeValue('deposit', value, info.rdl)
-              }}
-            />
+            <div className='farm-amount-input'>
+              <AmountInput
+                balance={info.rdl}
+                decimals={info.rdlDecimals}
+                token={{ name: 'RDL' }}
+                value={form.deposit}
+                placeholder='0.0'
+                onChange={(value) => {
+                  onChangeValue('deposit', value, info.rdl)
+                }}
+              />
+            </div>
             <Button
               disabled={!isValid.deposit}
               type='button'
@@ -262,16 +264,18 @@ export const Farm = (props: FarmProps) => {
               </label>{' '}
               RDL
             </label>
-            <AmountInput
-              balance={info.deposited}
-              decimals={info.rdlDecimals}
-              token={{ name: 'RDL' }}
-              value={form.withdraw}
-              placeholder='0.0'
-              onChange={(value) =>
-                onChangeValue('withdraw', value, info.deposited)
-              }
-            />
+            <div className='farm-amount-input'>
+              <AmountInput
+                balance={info.deposited}
+                decimals={info.rdlDecimals}
+                token={{ name: 'RDL' }}
+                value={form.withdraw}
+                placeholder='0.0'
+                onChange={(value) =>
+                  onChangeValue('withdraw', value, info.deposited)
+                }
+              />
+            </div>
             <Button
               disabled={!isValid.withdraw}
               type='button'
