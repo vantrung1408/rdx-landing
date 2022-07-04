@@ -1,5 +1,5 @@
 import React from "react";
-import "./input.css"
+import "./index.css"
 
 export const Input = function ({ title, ...inputProps }: any) {
   return (

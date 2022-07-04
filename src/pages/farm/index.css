@@ -1,0 +1,98 @@
+.form-wrapper {
+  display: flex;
+}
+
+.wallet-info-container {
+  text-align: right;
+  padding: 10px 0;
+  width: 100%;
+  color: #333;
+  font-weight: 600;
+}
+
+.wallet-info-container a {
+  font-weight: bold;
+  color: #333;
+}
+
+.wallet-info {
+  font-size: 10px;
+  text-align: right;
+  margin: 0 5px;
+}
+
+.wallet-info .number {
+  font-size: 12px;
+}
+
+.form-content-container {
+  width: 30vw;
+}
+
+.notify {
+  margin-top: 10px;
+  font-size: 10px;
+}
+
+.submit-button-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.loading {
+  height: 128px;
+}
+
+.withdraw-container {
+  display: flex;
+}
+/* 
+.amount-input {
+  padding: 12px 20px;
+  text-align: right;
+  font-size: 24px;
+  border-radius: 6px;
+  border: none;
+} */
+
+.amount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+}
+
+.number {
+  font-family: 'Coda';
+}
+
+.amount-number {
+  font-size: 18px;
+  color: #333;
+}
+
+.form-content-container .button-base {
+  font-size: 12px;
+  font-weight: 600;
+  width: 100%;
+  padding: 15px 30px;
+  margin-top: 12px;
+  text-transform: uppercase;
+  color: #3b3b3b;
+}
+
+#claim-btn {
+  margin-right: 10px;
+}
