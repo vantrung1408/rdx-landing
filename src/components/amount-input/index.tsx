@@ -17,6 +17,7 @@ export interface AmountInputProps {
   onChange: (value: number) => any
   style?: any
   showBalanceInfo?: boolean
+  renderBalanceInfo?: () => JSX.Element
   [key: string]: any
 }
 
@@ -27,9 +28,10 @@ export const AmountInput = function ({
   decimals,
   style,
   showBalanceInfo,
+  renderBalanceInfo,
   ...inputProps
 }: AmountInputProps) {
-  const percentage = [25, 50, 100]
+  const percentage = [25, 50, 75, 100]
 
   const onInputChange = (event: any) => {
     const value = event.target.value
@@ -57,34 +59,36 @@ export const AmountInput = function ({
         </div>
         <Input {...inputProps} onChange={onInputChange} />
       </div>
-      {balance && balance.gt(0) && (
-        <div className='balance-info-container'>
-          {showBalanceInfo && decimals ? (
+      <div className='balance-info-container'>
+        {showBalanceInfo && decimals ? (
+          renderBalanceInfo ? (
+            renderBalanceInfo()
+          ) : (
             <label className='wallet-info'>
               Balance:{' '}
               <label className='number'>
-                {formatCurrency(balance, decimals)}
+                {balance ? formatCurrency(balance, decimals) : '-'}
               </label>{' '}
               {token.name}
             </label>
-          ) : (
-            <label />
-          )}
-          <div className='percentage-container'>
-            {percentage.map((percent) => (
-              <label
-                key={percent}
-                className='percent number'
-                onClick={() => {
-                  changeByPercent(percent)
-                }}
-              >
-                {percent === 100 ? 'Max' : `${percent}%`}
-              </label>
-            ))}
-          </div>
+          )
+        ) : (
+          <label />
+        )}
+        <div className='percentage-container'>
+          {percentage.map((percent) => (
+            <label
+              key={percent}
+              className='percent number'
+              onClick={() => {
+                changeByPercent(percent)
+              }}
+            >
+              {percent === 100 ? 'Max' : `${percent}%`}
+            </label>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }

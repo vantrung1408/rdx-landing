@@ -2,19 +2,6 @@
   display: flex;
 }
 
-.wallet-info-container {
-  text-align: right;
-  padding: 10px 0;
-  width: 100%;
-  color: #333;
-  font-weight: 600;
-}
-
-.wallet-info-container a {
-  font-weight: bold;
-  color: #333;
-}
-
 .wallet-info {
   font-size: 10px;
   text-align: right;
@@ -23,10 +10,6 @@
 
 .wallet-info .number {
   font-size: 12px;
-}
-
-.form-content-container {
-  width: 30vw;
 }
 
 .notify {
@@ -98,6 +81,18 @@
 }
 
 .farm-amount-input {
-  margin: 20px 0;
   width: 100%;
+  margin-bottom: 20px;
+}
+
+.btn-row {
+  display: flex;
+  flex-direction: row;
+  width: calc(100% + 10px);
+  margin: 0 -5px 0 -5px;
+}
+
+.btn-row input {
+  flex: 1;
+  margin: 0 5px;
 }

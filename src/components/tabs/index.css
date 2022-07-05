@@ -1,0 +1,17 @@
+.tabs-container {
+    width: 100%;
+}
+
+.tabs-container .route {
+    width: auto;
+    flex: 1;
+}
+
+.tabs-container .routes {
+    width: 100%;
+    margin-top: 0;
+}
+
+.tabs-title {
+    margin-top: 10px;
+}
