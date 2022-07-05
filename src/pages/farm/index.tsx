@@ -1,8 +1,8 @@
 import React from 'react'
 import './index.css'
-import { ethers, BigNumber, Signer, utils, constants } from 'ethers'
+import { ethers, BigNumber, utils, constants } from 'ethers'
 import { AmountInput, Button, Tab, Tabs } from '../../components'
-import { RDL, RDX, CHEF } from '../../contracts'
+import { LP, RDX, CHEF } from '../../contracts'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import {
@@ -13,9 +13,10 @@ import {
 } from '../../utils/wallet'
 import { FormItem } from '../../utils/type'
 import { WalletStatus } from '../../components/wallet-status'
-
-const DECIMAL_PRECISION = 12
-const DECIMAL_PRECISION_IN_UNIT = utils.parseUnits('1', DECIMAL_PRECISION)
+import {
+  DECIMAL_PRECISION,
+  DECIMAL_PRECISION_IN_UNIT,
+} from '../../utils/constant'
 
 export interface FarmProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -26,7 +27,6 @@ export const Farm = (props: FarmProps) => {
     rdl: BigNumber.from(0),
     rdx: BigNumber.from(0),
     deposited: BigNumber.from(0),
-    address: '',
     reward: BigNumber.from(0),
     rdlDecimals: BigNumber.from(0),
     rdxDecimals: BigNumber.from(0),
@@ -52,10 +52,13 @@ export const Farm = (props: FarmProps) => {
     if (!!connected) {
       await loadInfo(true)
     }
-    window.ethereum.removeListener('accountsChanged', loadInfo)
-    window.ethereum.removeListener('chainChanged', loadInfo)
-    window.ethereum.on('accountsChanged', loadInfo)
-    window.ethereum.on('chainChanged', loadInfo)
+    const handler = () => {
+      loadInfo(false)
+    }
+    window.ethereum.removeListener('accountsChanged', handler)
+    window.ethereum.removeListener('chainChanged', handler)
+    window.ethereum.on('accountsChanged', handler)
+    window.ethereum.on('chainChanged', handler)
   }
 
   const getChef = async () => {
@@ -64,10 +67,10 @@ export const Farm = (props: FarmProps) => {
     return chef
   }
 
-  const getRDL = async () => {
+  const getLP = async () => {
     const signer = await requestSigner()
-    const rdl = new ethers.Contract(RDL.address, RDL.abi, signer)
-    return rdl
+    const lp = new ethers.Contract(LP.address, LP.abi, signer)
+    return lp
   }
 
   const getRDX = async () => {
@@ -86,21 +89,25 @@ export const Farm = (props: FarmProps) => {
       const signer = await requestSigner()
       const address = await signer.getAddress()
       //
-      const rdl = await getRDL()
-      const rdlDecimals: BigNumber = await rdl.decimals()
-      const rdlBalance: BigNumber = await rdl.balanceOf(address)
+      const [rdl, rdx, chef] = await Promise.all([getLP(), getRDX(), getChef()])
+      const [
+        rdlDecimals,
+        rdlBalance,
+        rdxDecimals,
+        rdxBalance,
+        pendingReward,
+        allowance,
+      ] = await Promise.all([
+        rdl.decimals(),
+        rdl.balanceOf(address),
+        rdl.decimals(),
+        rdx.balanceOf(address),
+        chef.rewardAmount(),
+        rdl.allowance(address, chef.address),
+      ])
       //
-      const rdx = await getRDX()
-      const rdxDecimals: BigNumber = await rdl.decimals()
-      const rdxBalance: BigNumber = await rdx.balanceOf(address)
-      //
-      const chef = await getChef()
       const deposited = (await chef.users(address)).balance
-      const pendingReward = await chef.rewardAmount()
       // const pendingReward = BigNumber.from(0)
-
-      // approve
-      const allowance: BigNumber = await rdl.allowance(address, chef.address)
 
       setInfo({
         deposited: deposited,
@@ -109,7 +116,6 @@ export const Farm = (props: FarmProps) => {
         reward: pendingReward,
         rdlDecimals: utils.parseUnits('1', rdlDecimals),
         rdxDecimals: utils.parseUnits('1', rdxDecimals),
-        address,
         needApprove: allowance.lt(rdlBalance),
       })
       // toast.success('Success to connect your wallet and get info')
@@ -127,7 +133,7 @@ export const Farm = (props: FarmProps) => {
     comperator: BigNumber
   ) => {
     let valid = false
-    if (value && info.address) {
+    if (value && info.rdlDecimals.gt(0)) {
       try {
         const parsedValue = info.rdlDecimals
           .div(DECIMAL_PRECISION_IN_UNIT)
@@ -168,7 +174,7 @@ export const Farm = (props: FarmProps) => {
     try {
       props.setLoading(true)
       const chef = await getChef()
-      const rdl = await getRDL()
+      const rdl = await getLP()
       const tx = await rdl.approve(
         chef.address,
         constants.MaxUint256.toString()
@@ -251,7 +257,7 @@ export const Farm = (props: FarmProps) => {
             <Button type='button' value='Approve' onClick={approve} />
           )}
           <Button
-            disabled={!stake.valid}
+            disabled={!stake.valid && !info.needApprove}
             type='button'
             value={stake.title}
             onClick={deposit}

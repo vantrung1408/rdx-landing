@@ -5,6 +5,7 @@ import downArrowIcon from '../../img/down-arrow.png'
 import { AmountInput, Button } from '../../components'
 import { BigNumber } from 'ethers'
 import './index.css'
+import { WalletStatus } from '../../components/wallet-status'
 
 export interface SwapProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -19,6 +20,7 @@ export const Swap = (props: SwapProps) => {
   return (
     <div className='pool form-container'>
       <div className='form-content-container'>
+        <WalletStatus callback={async () => {}} />
         <div className='pool-amount-input'>
           <AmountInput
             balance={BigNumber.from(100000)}
