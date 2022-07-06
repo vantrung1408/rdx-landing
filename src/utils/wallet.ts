@@ -12,9 +12,12 @@ export const requestSigner = async (): Promise<Signer> => {
 }
 
 export const formatCurrency = (value: BigNumber, decimals: BigNumber) => {
-  const parsedValue = new BigNumberJS(value.toString())
   const parsedDecimals = new BigNumberJS(decimals.toString())
-  return parsedValue.div(parsedDecimals).toFormat()
+  if (parsedDecimals.eq(0)) {
+    return '-'
+  }
+  const parsedValue = new BigNumberJS(value.toString())
+  return parsedValue.div(parsedDecimals).toFormat(4)
 }
 
 export const switchToCorrectNetwork = async () => {

@@ -8,9 +8,10 @@ export interface Tab {
 
 export interface TabsProps {
   tabs: Tab[]
+  onTabChange?: (index: number) => any
 }
 
-export const Tabs = function ({ tabs }: TabsProps) {
+export const Tabs = function ({ tabs, onTabChange }: TabsProps) {
   const [selected, setSelected] = React.useState(0)
 
   if (!tabs.length) {
@@ -27,6 +28,7 @@ export const Tabs = function ({ tabs }: TabsProps) {
               <a
                 onClick={() => {
                   setSelected(index)
+                  onTabChange && onTabChange(index)
                 }}
                 key={index}
                 className={index === selected ? 'route active' : 'route'}

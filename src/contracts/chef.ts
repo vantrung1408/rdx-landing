@@ -1,148 +1,148 @@
 export const CHEF = {
-  address: '0x7B09DEa853976c19f5E7eA77B18f1334D2e070Fa',
+  address: '0x4E8C1ECb6ea3ea9D443C66fA4891974D9d024C2e',
   abi: [
     {
-      inputs: [
+      "inputs": [
         {
-          internalType: 'address',
-          name: '_rdlAddress',
-          type: 'address',
+          "internalType": "address",
+          "name": "_rdlAddress",
+          "type": "address"
         },
         {
-          internalType: 'address',
-          name: '_rdxAddress',
-          type: 'address',
+          "internalType": "address",
+          "name": "_rdxAddress",
+          "type": "address"
         },
         {
-          internalType: 'uint256',
-          name: '_rewardPerBlock',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "_rewardPerBlock",
+          "type": "uint256"
+        }
       ],
-      stateMutability: 'nonpayable',
-      type: 'constructor',
+      "stateMutability": "nonpayable",
+      "type": "constructor"
     },
     {
-      inputs: [],
-      name: 'ACC_PER_SHARE_PRECISION',
-      outputs: [
+      "inputs": [],
+      "name": "ACC_PER_SHARE_PRECISION",
+      "outputs": [
         {
-          internalType: 'uint256',
-          name: '',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [],
-      name: 'claim',
-      outputs: [],
-      stateMutability: 'nonpayable',
-      type: 'function',
+      "inputs": [],
+      "name": "claim",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
-      inputs: [
+      "inputs": [
         {
-          internalType: 'uint256',
-          name: '_amount',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
       ],
-      name: 'deposit',
-      outputs: [],
-      stateMutability: 'nonpayable',
-      type: 'function',
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     },
     {
-      inputs: [],
-      name: 'rdl',
-      outputs: [
+      "inputs": [],
+      "name": "rdl",
+      "outputs": [
         {
-          internalType: 'contract IERC20',
-          name: '',
-          type: 'address',
-        },
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [],
-      name: 'rdx',
-      outputs: [
+      "inputs": [],
+      "name": "rdx",
+      "outputs": [
         {
-          internalType: 'contract IERC20',
-          name: '',
-          type: 'address',
-        },
+          "internalType": "contract IERC20",
+          "name": "",
+          "type": "address"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [],
-      name: 'rewardAmount',
-      outputs: [
+      "inputs": [],
+      "name": "rewardAmount",
+      "outputs": [
         {
-          internalType: 'uint256',
-          name: '',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [],
-      name: 'rewardPerBlock',
-      outputs: [
+      "inputs": [],
+      "name": "rewardPerBlock",
+      "outputs": [
         {
-          internalType: 'uint256',
-          name: '',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [
+      "inputs": [
         {
-          internalType: 'address',
-          name: '',
-          type: 'address',
-        },
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
       ],
-      name: 'users',
-      outputs: [
+      "name": "users",
+      "outputs": [
         {
-          internalType: 'uint256',
-          name: 'balance',
-          type: 'uint256',
+          "internalType": "uint256",
+          "name": "balance",
+          "type": "uint256"
         },
         {
-          internalType: 'uint256',
-          name: 'rewardDebt',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "rewardDebt",
+          "type": "uint256"
+        }
       ],
-      stateMutability: 'view',
-      type: 'function',
+      "stateMutability": "view",
+      "type": "function"
     },
     {
-      inputs: [
+      "inputs": [
         {
-          internalType: 'uint256',
-          name: '_amount',
-          type: 'uint256',
-        },
+          "internalType": "uint256",
+          "name": "_amount",
+          "type": "uint256"
+        }
       ],
-      name: 'withdraw',
-      outputs: [],
-      stateMutability: 'nonpayable',
-      type: 'function',
-    },
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
   ],
 }

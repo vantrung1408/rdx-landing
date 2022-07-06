@@ -18,6 +18,7 @@ export interface AmountInputProps {
   style?: any
   showBalanceInfo?: boolean
   renderBalanceInfo?: () => JSX.Element
+  balanceInfoTitle?: string
   [key: string]: any
 }
 
@@ -29,6 +30,7 @@ export const AmountInput = function ({
   style,
   showBalanceInfo,
   renderBalanceInfo,
+  balanceInfoTitle,
   ...inputProps
 }: AmountInputProps) {
   const percentage = [25, 50, 75, 100]
@@ -65,7 +67,7 @@ export const AmountInput = function ({
             renderBalanceInfo()
           ) : (
             <label className='wallet-info'>
-              Balance:{' '}
+              {balanceInfoTitle || 'Balance'}:{' '}
               <label className='number'>
                 {balance ? formatCurrency(balance, decimals) : '-'}
               </label>{' '}

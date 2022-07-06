@@ -139,12 +139,15 @@ export const Farm = (props: FarmProps) => {
           .div(DECIMAL_PRECISION_IN_UNIT)
           .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
         valid = parsedValue.gt(0) && parsedValue.lte(comperator)
+        if (parsedValue.gt(comperator)) {
+          title = 'Insufficient balance'
+        }
       } catch (error) {
         valid = false
       }
     }
     setter({
-      title: valid ? title : 'Insufficient balance',
+      title: title,
       value: value,
       valid: valid,
     })
@@ -152,10 +155,13 @@ export const Farm = (props: FarmProps) => {
 
   const withdraw = async () => {
     try {
+      if (!unStake.valid) {
+        return
+      }
       props.setLoading(true)
       const value = info.rdlDecimals
         .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(unStake.value, DECIMAL_PRECISION))
+        .mul(utils.parseUnits(unStake.value.toString(), DECIMAL_PRECISION))
       const chef = await getChef()
       // withdraw
       const tx = await chef.withdraw(value.toString())
@@ -191,17 +197,22 @@ export const Farm = (props: FarmProps) => {
 
   const deposit = async () => {
     try {
+      if (!stake.valid) {
+        return
+      }
       props.setLoading(true)
       const value = info.rdlDecimals
         .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(stake.value, DECIMAL_PRECISION))
+        .mul(utils.parseUnits(stake.value.toString(), DECIMAL_PRECISION))
       const chef = await getChef()
       // deposit
+      console.log(value.toString())
       const tx = await chef.deposit(value.toString())
       await tx.wait()
       await loadInfo(false)
       toast.success(`Success, please check your deposited balance`)
     } catch (err) {
+      console.log(err)
       toast.error('Failed, please try again later!')
     } finally {
       props.setLoading(false)
@@ -282,17 +293,7 @@ export const Farm = (props: FarmProps) => {
               value={unStake.value}
               placeholder='0.0'
               showBalanceInfo={info.rdlDecimals.gt(0)}
-              renderBalanceInfo={() => (
-                <label className='wallet-info'>
-                  Deposited:{' '}
-                  <label className='number'>
-                    {info.rdxDecimals.eq(0)
-                      ? '0'
-                      : formatCurrency(info.deposited, info.rdlDecimals)}
-                  </label>{' '}
-                  RDL
-                </label>
-              )}
+              balanceInfoTitle='Deposited'
               onChange={(value) =>
                 onChangeValue('Unstake', setUnStake, value, info.deposited)
               }

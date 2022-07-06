@@ -22,6 +22,17 @@ export interface PoolProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
 }
 
+export interface TokenInput {
+  value: string
+  valid: boolean
+}
+
+export interface FormProps {
+  tokenA: TokenInput
+  tokenB: TokenInput
+  title: string
+}
+
 export const Pool = (props: PoolProps) => {
   const [info, setInfo] = React.useState({
     tokenA: BigNumber.from(0),
@@ -30,6 +41,10 @@ export const Pool = (props: PoolProps) => {
     tokenBDecimals: BigNumber.from(0),
     needApproveTokenA: false,
     needApproveTokenB: false,
+    pool: {
+      tokenA: BigNumber.from(0),
+      tokenB: BigNumber.from(0),
+    },
     ratio: {
       tokenA: 1,
       tokenB: 1,
@@ -45,8 +60,19 @@ export const Pool = (props: PoolProps) => {
         value: '',
         valid: false,
       },
-      title: '',
-    },
+      title: 'Supply',
+    } as FormProps,
+    remove: {
+      tokenA: {
+        value: '',
+        valid: false,
+      },
+      tokenB: {
+        value: '',
+        valid: false,
+      },
+      title: 'Withdraw',
+    } as FormProps,
   })
   const pairs = [
     {
@@ -129,7 +155,8 @@ export const Pool = (props: PoolProps) => {
         tokenB.allowance(address, lp.address),
       ])
       const ratio: BigNumber[] = await lp.prepareAmount(1, await lp.amountB())
-
+      const pool: BigNumber[] = await lp.getUserCurrentBalance()
+      // const pool: BigNumber[] = [BigNumber.from(0), BigNumber.from(0)]
       setInfo({
         tokenA: tokenABalance,
         tokenB: tokenBBalance,
@@ -141,6 +168,10 @@ export const Pool = (props: PoolProps) => {
           tokenA: ratio[0].toNumber(),
           tokenB: ratio[1].toNumber(),
         },
+        pool: {
+          tokenA: pool[0],
+          tokenB: pool[1],
+        },
       })
     } catch {
       toast.error('Failed to connect your wallet')
@@ -149,55 +180,93 @@ export const Pool = (props: PoolProps) => {
     }
   }
 
-  // const onChangeValue = async (
-  //   title: string,
-  //   value: number | '',
-  //   comperator: BigNumber
-  // ) => {
-  //   let valueA = '',
-  //     valueB = ''
-  //   if (value) {
-  //     const isUpdateA = comperator.eq(info.tokenA)
-  //     const lp = await getLP()
-  //     const values: BigNumber[] = await lp.prepareAmount(
-  //       isUpdateA ? value : await lp.amountA(),
-  //       isUpdateA ? await lp.amountB() : value
-  //     )
-  //     console.log(values.map(c => c.toString()))
-  //   }
-  //   form.add.tokenA.value = valueA
-  //   form.add.tokenB.value = valueB
-  //   setForm(form)
-  // }
-
-  const onChangeAmountB = (value: number | '') => {
+  const onChangeAmountB = (
+    title: string,
+    formProps: FormProps,
+    value: number | '',
+    balanceA: BigNumber,
+    balanceB: BigNumber
+  ) => {
+    const { tokenA, tokenB } = formProps
     if (value && info.ratio.tokenB) {
-      form.add.tokenA.value = (
+      tokenA.value = (
         (value * info.ratio.tokenA) /
         info.ratio.tokenB
       ).toString()
     } else {
-      form.add.tokenA.value = ''
+      tokenA.value = ''
     }
-    form.add.tokenB.value = value.toString()
+    tokenB.value = value.toString()
+    checkFormValidAndGenTitle(title, formProps, balanceA, balanceB)
     setForm({
       ...form,
     })
   }
 
-  const onChangeAmountA = (value: number | '') => {
+  const onChangeAmountA = (
+    title: string,
+    formProps: FormProps,
+    value: number | '',
+    balanceA: BigNumber,
+    balanceB: BigNumber
+  ) => {
+    const { tokenA, tokenB } = formProps
     if (value && info.ratio.tokenA) {
-      form.add.tokenB.value = (
+      tokenB.value = (
         (value * info.ratio.tokenB) /
         info.ratio.tokenA
       ).toString()
     } else {
-      form.add.tokenB.value = ''
+      tokenB.value = ''
     }
-    form.add.tokenA.value = value.toString()
+    tokenA.value = value.toString()
+    checkFormValidAndGenTitle(title, formProps, balanceA, balanceB)
     setForm({
       ...form,
     })
+  }
+
+  const checkFormValidAndGenTitle = (
+    title: string,
+    formProps: FormProps,
+    balanceA: BigNumber,
+    balanceB: BigNumber
+  ) => {
+    const { tokenA, tokenB } = formProps
+    const data = [
+      {
+        ref: tokenA,
+        value: tokenA.value,
+        decimals: info.tokenADecimals,
+        balance: balanceA,
+        name: pair.tokenA.name,
+      },
+      {
+        ref: tokenB,
+        value: tokenB.value,
+        decimals: info.tokenBDecimals,
+        balance: balanceB,
+        name: pair.tokenB.name,
+      },
+    ]
+    try {
+      for (let { ref, value, decimals, balance, name } of data) {
+        const parsedValue = decimals
+          .div(DECIMAL_PRECISION_IN_UNIT)
+          .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
+        ref.valid = !!value && balance.gte(parsedValue)
+        formProps.title = balance.lt(parsedValue)
+          ? `Insufficient ${name} balance`
+          : title
+        if (!ref.valid) {
+          break
+        }
+      }
+    } catch {
+      tokenA.valid = false
+      tokenB.valid = false
+      formProps.title = title
+    }
   }
 
   const approve = async (contract: ethers.Contract) => {
@@ -220,6 +289,9 @@ export const Pool = (props: PoolProps) => {
 
   const supply = async () => {
     try {
+      if (!form.add.tokenA.valid || !form.add.tokenB.valid) {
+        return
+      }
       props.setLoading(true)
       const amountA = info.tokenADecimals
         .div(DECIMAL_PRECISION_IN_UNIT)
@@ -238,7 +310,40 @@ export const Pool = (props: PoolProps) => {
       toast.error('Failed, please try again later!')
     } finally {
       props.setLoading(false)
-      onChangeAmountA('')
+      onChangeAmountA('Supply', form.add, '', info.tokenA, info.tokenB)
+    }
+  }
+
+  const withdraw = async () => {
+    try {
+      if (!form.remove.tokenA.valid || !form.remove.tokenB.valid) {
+        return
+      }
+      props.setLoading(true)
+      const amountA = info.tokenADecimals
+        .div(DECIMAL_PRECISION_IN_UNIT)
+        .mul(utils.parseUnits(form.remove.tokenA.value, DECIMAL_PRECISION))
+      const amountB = info.tokenBDecimals
+        .div(DECIMAL_PRECISION_IN_UNIT)
+        .mul(utils.parseUnits(form.remove.tokenB.value, DECIMAL_PRECISION))
+      const lp = await getLP()
+      const tx = await lp.remove(amountA, amountB)
+      await tx.wait()
+      await loadInfo()
+      toast.success(
+        `Success, you withdraw ${form.remove.tokenA.value} ${pair.tokenA.name}, ${form.remove.tokenB.value} ${pair.tokenB.name} from the pool`
+      )
+    } catch {
+      toast.error('Failed, please try again later!')
+    } finally {
+      props.setLoading(false)
+      onChangeAmountA(
+        'Withdraw',
+        form.remove,
+        '',
+        info.pool.tokenA,
+        info.pool.tokenB
+      )
     }
   }
 
@@ -277,7 +382,13 @@ export const Pool = (props: PoolProps) => {
               value={form.add.tokenA.value}
               placeholder='0.0'
               onChange={(value) => {
-                onChangeAmountA(value)
+                onChangeAmountA(
+                  'Supply',
+                  form.add,
+                  value,
+                  info.tokenA,
+                  info.tokenB
+                )
               }}
               style={{ marginBottom: 0 }}
               showBalanceInfo
@@ -294,7 +405,13 @@ export const Pool = (props: PoolProps) => {
             value={form.add.tokenB.value}
             placeholder='0.0'
             onChange={(value) => {
-              onChangeAmountB(value)
+              onChangeAmountB(
+                'Supply',
+                form.add,
+                value,
+                info.tokenA,
+                info.tokenB
+              )
             }}
             showBalanceInfo
           />
@@ -324,9 +441,9 @@ export const Pool = (props: PoolProps) => {
           )}
           <Button
             type='button'
-            value='Supply'
+            value={form.add.title}
             onClick={supply}
-            disabled={false}
+            disabled={!form.add.tokenA.valid || !form.add.tokenB.valid}
           />
         </div>
       ),
@@ -338,44 +455,61 @@ export const Pool = (props: PoolProps) => {
           <WalletStatus callback={async () => {}} />
           <div className='pool-amount-input'>
             <AmountInput
-              balance={BigNumber.from(100000)}
-              decimals={BigNumber.from(100000)}
+              balance={info.pool.tokenA}
+              decimals={info.tokenADecimals}
               token={{
                 name: pair.tokenA.name,
                 logo: pair.tokenA.logo,
               }}
-              value={form.add.tokenA.value}
+              value={form.remove.tokenA.value}
               placeholder='0.0'
-              onChange={(value) => {}}
+              balanceInfoTitle='Pooled'
+              onChange={(value) => {
+                onChangeAmountA(
+                  'Withdraw',
+                  form.remove,
+                  value,
+                  info.pool.tokenA,
+                  info.pool.tokenB
+                )
+              }}
               style={{ marginBottom: 0 }}
               showBalanceInfo
             />
             <img className='plus-icon' src={plusIcon} />
           </div>
           <AmountInput
-            balance={BigNumber.from(100000)}
-            decimals={BigNumber.from(100000)}
+            balance={info.pool.tokenB}
+            decimals={info.tokenBDecimals}
             token={{
               name: pair.tokenB.name,
               logo: pair.tokenB.logo,
             }}
-            value={form.add.tokenB.value}
+            value={form.remove.tokenB.value}
             placeholder='0.0'
-            onChange={(value) => {}}
+            balanceInfoTitle='Pooled'
+            onChange={(value) => {
+              onChangeAmountB(
+                'Withdraw',
+                form.remove,
+                value,
+                info.pool.tokenA,
+                info.pool.tokenB
+              )
+            }}
             showBalanceInfo
           />
-          <div className='rate-container'>
-            <label className='rate-info'>Rate</label>
-            <label className='rate-info'>
-              <label className='number'>1</label> TOKENA ={' '}
-              <label className='number'>1000</label> TOKENB
-            </label>
-          </div>
+          {info.ratio.tokenA && info.ratio.tokenB && (
+            <div className='rate-container'>
+              <label className='rate-info'>Rate</label>
+              {renderRatio()}
+            </div>
+          )}
           <Button
             type='button'
-            value='Withdraw'
-            onClick={supply}
-            disabled={true}
+            value={form.remove.title}
+            onClick={withdraw}
+            disabled={!form.remove.tokenA.valid || !form.remove.tokenB.valid}
           />
         </div>
       ),
