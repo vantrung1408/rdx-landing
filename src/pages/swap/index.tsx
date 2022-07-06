@@ -271,7 +271,7 @@ export const Swap = (props: SwapProps) => {
         `Success, you swap from ${form.tokenA.value} ${pair.tokenA.name} to ${form.tokenB.value} ${pair.tokenB.name}`
       )
     } catch {
-      toast.error('Failed, please try again later or try refresh this page!')
+      toast.error('Failed, please try again later or try refresh this page to fetch newest price!')
     } finally {
       props.setLoading(false)
       onChangeAmountA('')
