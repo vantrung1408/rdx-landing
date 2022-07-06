@@ -84,3 +84,14 @@ body {
   margin-right: -20px;
   margin-bottom: 10px;
 }
+
+.arrow-icon {
+  background-color: #fff;
+  /* border: 1px solid #ccc; */
+  border-radius: 999px;
+  height: 24px;
+  width: 24px;
+  position: absolute;
+  bottom: -14px;
+  left: calc(50% - 12px);
+}

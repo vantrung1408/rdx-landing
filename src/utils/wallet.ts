@@ -1,5 +1,6 @@
 import { ethers, Signer, BigNumber } from 'ethers'
 import { BigNumber as BigNumberJS } from 'bignumber.js'
+import { ROUNDED_NUMBER } from './constant'
 BigNumberJS.config({
   CRYPTO: true,
 })
@@ -17,7 +18,7 @@ export const formatCurrency = (value: BigNumber, decimals: BigNumber) => {
     return '-'
   }
   const parsedValue = new BigNumberJS(value.toString())
-  return parsedValue.div(parsedDecimals).toFormat(4)
+  return parsedValue.div(parsedDecimals).toFormat(ROUNDED_NUMBER)
 }
 
 export const switchToCorrectNetwork = async () => {

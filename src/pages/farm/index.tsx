@@ -120,7 +120,7 @@ export const Farm = (props: FarmProps) => {
       })
       // toast.success('Success to connect your wallet and get info')
     } catch {
-      toast.error('Failed to connect your wallet')
+      // toast.error('Failed to connect your wallet')
     } finally {
       props.setLoading(false)
     }

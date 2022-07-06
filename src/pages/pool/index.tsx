@@ -17,20 +17,10 @@ import {
   DECIMAL_PRECISION,
   DECIMAL_PRECISION_IN_UNIT,
 } from '../../utils/constant'
+import { FormProps } from '../../utils/type'
 
 export interface PoolProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
-}
-
-export interface TokenInput {
-  value: string
-  valid: boolean
-}
-
-export interface FormProps {
-  tokenA: TokenInput
-  tokenB: TokenInput
-  title: string
 }
 
 export const Pool = (props: PoolProps) => {
@@ -174,7 +164,7 @@ export const Pool = (props: PoolProps) => {
         },
       })
     } catch {
-      toast.error('Failed to connect your wallet')
+      // toast.error('Failed to connect your wallet')
     } finally {
       props.setLoading(false)
     }
