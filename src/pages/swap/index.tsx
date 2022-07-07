@@ -180,7 +180,8 @@ export const Swap = (props: SwapProps) => {
       form.tokenA.valid = parsedValue.gt(0) && parsedValue.lte(info.tokenA)
       form.tokenB.value = valueB
         .div(new BigNumber(10).pow(info.tokenADecimals))
-        .toFixed(ROUNDED_NUMBER)
+        .decimalPlaces(ROUNDED_NUMBER)
+        .toString()
       if (parsedValue.gt(info.tokenA)) {
         title = `Insufficient ${pair.tokenA.name} balance`
       }
@@ -201,7 +202,8 @@ export const Swap = (props: SwapProps) => {
       const valueA = calculateSwapInfo(parsedValue, info.amountB, info.amountA)
       form.tokenA.value = valueA
         .div(new BigNumber(10).pow(info.tokenBDecimals))
-        .toFixed(ROUNDED_NUMBER)
+        .decimalPlaces(ROUNDED_NUMBER)
+        .toString()
     } else {
       form.tokenA.value = ''
     }
@@ -285,13 +287,19 @@ export const Swap = (props: SwapProps) => {
         <label className='number'>
           {!tokenA || new BigNumber(tokenA).eq(0)
             ? '-'
-            : new BigNumber(tokenA).div(tokenA).toFixed(ROUNDED_NUMBER)}
+            : new BigNumber(tokenA)
+                .div(tokenA)
+                .decimalPlaces(ROUNDED_NUMBER)
+                .toString()}
         </label>{' '}
         {tokenALabel} ={' ~'}
         <label className='number'>
           {!tokenA || new BigNumber(tokenA).eq(0)
             ? '-'
-            : new BigNumber(tokenB).div(tokenA).toFixed(ROUNDED_NUMBER)}
+            : new BigNumber(tokenB)
+                .div(tokenA)
+                .decimalPlaces(ROUNDED_NUMBER)
+                .toString()}
         </label>{' '}
         {tokenBLabel}
       </label>

@@ -353,13 +353,19 @@ export const Pool = (props: PoolProps) => {
         <label className='number'>
           {!tokenA || new BigNumber(tokenA).eq(0)
             ? '-'
-            : new BigNumber(tokenA).div(tokenA).toFixed(ROUNDED_NUMBER)}
+            : new BigNumber(tokenA)
+                .div(tokenA)
+                .decimalPlaces(ROUNDED_NUMBER)
+                .toString()}
         </label>{' '}
         {tokenALabel} ={' '}
         <label className='number'>
           {!tokenA || new BigNumber(tokenA).eq(0)
             ? '-'
-            : new BigNumber(tokenB).div(tokenA).toFixed(ROUNDED_NUMBER)}
+            : new BigNumber(tokenB)
+                .div(tokenA)
+                .decimalPlaces(ROUNDED_NUMBER)
+                .toString()}
         </label>{' '}
         {tokenBLabel}
       </label>

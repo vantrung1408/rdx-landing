@@ -23,7 +23,8 @@ export const formatCurrency = (
   const parsedValue = new BigNumber(value)
   return parsedValue
     .div(new BigNumber(10).pow(parsedDecimals))
-    .toFormat(ROUNDED_NUMBER)
+    .decimalPlaces(ROUNDED_NUMBER)
+    .toFormat()
 }
 
 export const switchToCorrectNetwork = async () => {
