@@ -3,21 +3,20 @@ import ethIcon from '../../img/eth.png'
 import usdcIcon from '../../img/usdc.png'
 import plusIcon from '../../img/plus.png'
 import { AmountInput, Button, Tab, Tabs } from '../../components'
-import { BigNumber, constants, ethers, utils } from 'ethers'
+import { constants, ethers } from 'ethers'
 import './index.css'
 import { WalletStatus } from '../../components/wallet-status'
 import {
+  decimalsCorrector,
   getAccount,
   requestSigner,
   switchToCorrectNetwork,
 } from '../../utils/wallet'
 import { LP, WETH, USDC } from '../../contracts'
 import { toast } from 'react-toastify'
-import {
-  DECIMAL_PRECISION,
-  DECIMAL_PRECISION_IN_UNIT,
-} from '../../utils/constant'
 import { FormProps } from '../../utils/type'
+import { BigNumber } from 'bignumber.js'
+import { ROUNDED_NUMBER } from '../../utils/constant'
 
 export interface PoolProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -25,15 +24,15 @@ export interface PoolProps {
 
 export const Pool = (props: PoolProps) => {
   const [info, setInfo] = React.useState({
-    tokenA: BigNumber.from(0),
-    tokenB: BigNumber.from(0),
-    tokenADecimals: BigNumber.from(0),
-    tokenBDecimals: BigNumber.from(0),
+    tokenA: new BigNumber(0),
+    tokenB: new BigNumber(0),
+    tokenADecimals: new BigNumber(0),
+    tokenBDecimals: new BigNumber(0),
     needApproveTokenA: false,
     needApproveTokenB: false,
     pool: {
-      tokenA: BigNumber.from(0),
-      tokenB: BigNumber.from(0),
+      tokenA: new BigNumber(0),
+      tokenB: new BigNumber(0),
     },
     ratio: {
       tokenA: 1,
@@ -148,10 +147,10 @@ export const Pool = (props: PoolProps) => {
       const pool: BigNumber[] = await lp.getUserCurrentBalance()
       // const pool: BigNumber[] = [BigNumber.from(0), BigNumber.from(0)]
       setInfo({
-        tokenA: tokenABalance,
-        tokenB: tokenBBalance,
-        tokenADecimals: utils.parseUnits('1', tokenADecimals),
-        tokenBDecimals: utils.parseUnits('1', tokenBDecimals),
+        tokenA: new BigNumber(tokenABalance.toString()),
+        tokenB: new BigNumber(tokenBBalance.toString()),
+        tokenADecimals: new BigNumber(tokenADecimals.toString()),
+        tokenBDecimals: new BigNumber(tokenBDecimals.toString()),
         needApproveTokenA: tokenAAllowance.lt(tokenABalance),
         needApproveTokenB: tokenBAllowance.lt(tokenBBalance),
         ratio: {
@@ -159,8 +158,8 @@ export const Pool = (props: PoolProps) => {
           tokenB: ratio[1].toNumber(),
         },
         pool: {
-          tokenA: pool[0],
-          tokenB: pool[1],
+          tokenA: new BigNumber(pool[0].toString()),
+          tokenB: new BigNumber(pool[1].toString()),
         },
       })
     } catch {
@@ -241,9 +240,7 @@ export const Pool = (props: PoolProps) => {
     ]
     try {
       for (let { ref, value, decimals, balance, name } of data) {
-        const parsedValue = decimals
-          .div(DECIMAL_PRECISION_IN_UNIT)
-          .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
+        const parsedValue = decimalsCorrector(value, decimals)
         ref.valid = !!value && balance.gte(parsedValue)
         formProps.title = balance.lt(parsedValue)
           ? `Insufficient ${name} balance`
@@ -283,14 +280,16 @@ export const Pool = (props: PoolProps) => {
         return
       }
       props.setLoading(true)
-      const amountA = info.tokenADecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(form.add.tokenA.value, DECIMAL_PRECISION))
-      const amountB = info.tokenBDecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(form.add.tokenB.value, DECIMAL_PRECISION))
+      const amountA = decimalsCorrector(
+        form.add.tokenA.value,
+        info.tokenADecimals
+      )
+      const amountB = decimalsCorrector(
+        form.add.tokenB.value,
+        info.tokenBDecimals
+      )
       const lp = await getLP()
-      const tx = await lp.add(amountA, amountB)
+      const tx = await lp.add(amountA.toString(), amountB.toString())
       await tx.wait()
       await loadInfo()
       toast.success(
@@ -310,14 +309,16 @@ export const Pool = (props: PoolProps) => {
         return
       }
       props.setLoading(true)
-      const amountA = info.tokenADecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(form.remove.tokenA.value, DECIMAL_PRECISION))
-      const amountB = info.tokenBDecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(form.remove.tokenB.value, DECIMAL_PRECISION))
+      const amountA = decimalsCorrector(
+        form.remove.tokenA.value,
+        info.tokenADecimals
+      )
+      const amountB = decimalsCorrector(
+        form.remove.tokenB.value,
+        info.tokenBDecimals
+      )
       const lp = await getLP()
-      const tx = await lp.remove(amountA, amountB)
+      const tx = await lp.remove(amountA.toString(), amountB.toString())
       await tx.wait()
       await loadInfo()
       toast.success(
@@ -349,8 +350,18 @@ export const Pool = (props: PoolProps) => {
           setRatioSwitcher(!ratioSwitcher)
         }}
       >
-        <label className='number'>{tokenA / tokenA}</label> {tokenALabel} ={' '}
-        <label className='number'>{tokenB / tokenA}</label> {tokenBLabel}
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : new BigNumber(tokenA).div(tokenA).toFixed(ROUNDED_NUMBER)}
+        </label>{' '}
+        {tokenALabel} ={' '}
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : new BigNumber(tokenB).div(tokenA).toFixed(ROUNDED_NUMBER)}
+        </label>{' '}
+        {tokenBLabel}
       </label>
     )
   }

@@ -1,9 +1,8 @@
 import React from 'react'
 import './index.css'
 import { Input } from '../input'
-import { BigNumber } from 'ethers'
-import { BigNumber as BigNumberJS } from 'bignumber.js'
-import { formatCurrency } from '../../utils/wallet'
+import { BigNumber } from 'bignumber.js'
+import { decimalsCorrector, formatCurrency } from '../../utils/wallet'
 
 export interface Token {
   name: string
@@ -44,12 +43,21 @@ export const AmountInput = function ({
     if (!balance || !decimals) {
       return
     }
-    const value = new BigNumberJS(balance.toString())
-      .div(decimals.toString())
+    const value = balance
+      .div(new BigNumber(10).pow(decimals))
       .div(100)
       .multipliedBy(percent)
       .toNumber()
     onChange(value)
+  }
+
+  const onKeyPress = (event: any) => {
+    let charCode = event.which ? event.which : event.keyCode
+    return !(
+      charCode != 46 &&
+      charCode > 31 &&
+      (charCode < 48 || charCode > 57)
+    )
   }
 
   return (
@@ -59,7 +67,11 @@ export const AmountInput = function ({
           {token.logo && <img className='token-logo' src={token.logo} />}
           <label className='token-name'>{token.name}</label>
         </div>
-        <Input {...inputProps} onChange={onInputChange} />
+        <Input
+          {...inputProps}
+          onChange={onInputChange}
+          onKeyPress={onKeyPress}
+        />
       </div>
       <div className='balance-info-container'>
         {showBalanceInfo && decimals ? (

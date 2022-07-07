@@ -2,23 +2,20 @@ import React from 'react'
 import ethIcon from '../../img/eth.png'
 import usdcIcon from '../../img/usdc.png'
 import { AmountInput, Button } from '../../components'
-import { BigNumber, constants, ethers, utils } from 'ethers'
-import { BigNumber as BigNumberJS } from 'bignumber.js'
+import { constants, ethers } from 'ethers'
+import { BigNumber } from 'bignumber.js'
 import './index.css'
 import { WalletStatus } from '../../components/wallet-status'
 import { FormProps } from '../../utils/type'
 import {
+  decimalsCorrector,
   getAccount,
   requestSigner,
   switchToCorrectNetwork,
 } from '../../utils/wallet'
 import { LP, USDC, WETH } from '../../contracts'
 import { toast } from 'react-toastify'
-import {
-  DECIMAL_PRECISION,
-  DECIMAL_PRECISION_IN_UNIT,
-  ROUNDED_NUMBER,
-} from '../../utils/constant'
+import { ROUNDED_NUMBER } from '../../utils/constant'
 
 export interface SwapProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -26,15 +23,15 @@ export interface SwapProps {
 
 export const Swap = (props: SwapProps) => {
   const [info, setInfo] = React.useState({
-    tokenA: BigNumber.from(0),
-    tokenB: BigNumber.from(0),
-    tokenADecimals: BigNumber.from(0),
-    tokenBDecimals: BigNumber.from(0),
+    tokenA: new BigNumber(0),
+    tokenB: new BigNumber(0),
+    tokenADecimals: new BigNumber(0),
+    tokenBDecimals: new BigNumber(0),
     needApproveTokenA: false,
     needApproveTokenB: false,
-    amountA: BigNumber.from(0),
-    amountB: BigNumber.from(0),
-    k: BigNumber.from(0),
+    amountA: new BigNumber(0),
+    amountB: new BigNumber(0),
+    k: new BigNumber(0),
   })
   const [form, setForm] = React.useState<FormProps>({
     tokenA: {
@@ -140,15 +137,15 @@ export const Swap = (props: SwapProps) => {
       ])
       // const pool: BigNumber[] = [BigNumber.from(0), BigNumber.from(0)]
       setInfo({
-        tokenA: tokenABalance,
-        tokenB: tokenBBalance,
-        tokenADecimals: utils.parseUnits('1', tokenADecimals),
-        tokenBDecimals: utils.parseUnits('1', tokenBDecimals),
+        tokenA: new BigNumber(tokenABalance.toString()),
+        tokenB: new BigNumber(tokenBBalance.toString()),
+        tokenADecimals: new BigNumber(tokenADecimals.toString()),
+        tokenBDecimals: new BigNumber(tokenBDecimals.toString()),
         needApproveTokenA: tokenAAllowance.lt(tokenABalance),
         needApproveTokenB: tokenBAllowance.lt(tokenBBalance),
-        amountA,
-        amountB,
-        k,
+        amountA: new BigNumber(amountA.toString()),
+        amountB: new BigNumber(amountB.toString()),
+        k: new BigNumber(k.toString()),
       })
     } catch {
       // toast.error('Failed to connect your wallet')
@@ -178,17 +175,11 @@ export const Swap = (props: SwapProps) => {
   const onChangeAmountA = (value: number | '') => {
     let title: string = 'Swap'
     if (value) {
-      const parsedValue = info.tokenADecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
-      const valueB = calculateSwapInfo(
-        new BigNumberJS(parsedValue.toString()),
-        new BigNumberJS(info.amountA.toString()),
-        new BigNumberJS(info.amountB.toString())
-      )
+      const parsedValue = decimalsCorrector(value, info.tokenADecimals)
+      const valueB = calculateSwapInfo(parsedValue, info.amountA, info.amountB)
       form.tokenA.valid = parsedValue.gt(0) && parsedValue.lte(info.tokenA)
       form.tokenB.value = valueB
-        .div(info.tokenADecimals.toString())
+        .div(new BigNumber(10).pow(info.tokenADecimals))
         .toFixed(ROUNDED_NUMBER)
       if (parsedValue.gt(info.tokenA)) {
         title = `Insufficient ${pair.tokenA.name} balance`
@@ -206,16 +197,10 @@ export const Swap = (props: SwapProps) => {
 
   const onChangeAmountB = (value: number | '') => {
     if (value) {
-      const parsedValue = info.tokenBDecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
-      const valueA = calculateSwapInfo(
-        new BigNumberJS(parsedValue.toString()),
-        new BigNumberJS(info.amountB.toString()),
-        new BigNumberJS(info.amountA.toString())
-      )
+      const parsedValue = decimalsCorrector(value, info.tokenBDecimals)
+      const valueA = calculateSwapInfo(parsedValue, info.amountB, info.amountA)
       form.tokenA.value = valueA
-        .div(info.tokenBDecimals.toString())
+        .div(new BigNumber(10).pow(info.tokenBDecimals))
         .toFixed(ROUNDED_NUMBER)
     } else {
       form.tokenA.value = ''
@@ -228,16 +213,17 @@ export const Swap = (props: SwapProps) => {
   }
 
   const calculateSwapInfo = (
-    value: BigNumberJS,
-    x: BigNumberJS,
-    y: BigNumberJS
+    value: BigNumber.Value,
+    x: BigNumber.Value,
+    y: BigNumber.Value
   ) => {
-    if (value.eq(0) || x.eq(0)) {
-      return new BigNumberJS(0)
+    const parsedValue = new BigNumber(value)
+    const parsedX = new BigNumber(x)
+    const parsedY = new BigNumber(y)
+    if (parsedValue.eq(0) || parsedX.eq(0)) {
+      return new BigNumber(0)
     }
-    const needed = y.minus(
-      new BigNumberJS(info.k.toString()).div(x.plus(value))
-    )
+    const needed = parsedY.minus(info.k.div(parsedX.plus(parsedValue)))
     return needed
   }
 
@@ -247,14 +233,8 @@ export const Swap = (props: SwapProps) => {
         return
       }
       props.setLoading(true)
-      const amount = info.tokenADecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(form.tokenA.value, DECIMAL_PRECISION))
-      const minAmountOut = calculateSwapInfo(
-        new BigNumberJS(amount.toString()),
-        new BigNumberJS(info.amountA.toString()),
-        new BigNumberJS(info.amountB.toString())
-      )
+      const amount = decimalsCorrector(form.tokenA.value, info.tokenADecimals)
+      const minAmountOut = calculateSwapInfo(amount, info.amountA, info.amountB)
         .multipliedBy(0.95) // slippage 0.5%
         .toFixed(0)
       const lp = await getLP()
@@ -263,15 +243,17 @@ export const Swap = (props: SwapProps) => {
       const tx = await lp.swap(
         tokenA.address,
         tokenB.address,
-        amount,
-        minAmountOut
+        amount.toString(),
+        minAmountOut.toString()
       )
       await tx.wait()
       toast.success(
         `Success, you swap from ${form.tokenA.value} ${pair.tokenA.name} to ${form.tokenB.value} ${pair.tokenB.name}`
       )
     } catch {
-      toast.error('Failed, please try again later or try refresh this page to fetch newest price!')
+      toast.error(
+        'Failed, please try again later or try refresh this page to fetch newest price!'
+      )
     } finally {
       props.setLoading(false)
       onChangeAmountA('')
@@ -301,11 +283,15 @@ export const Swap = (props: SwapProps) => {
         }}
       >
         <label className='number'>
-          {new BigNumberJS(tokenA).div(tokenA).toFixed(ROUNDED_NUMBER)}
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : new BigNumber(tokenA).div(tokenA).toFixed(ROUNDED_NUMBER)}
         </label>{' '}
         {tokenALabel} ={' ~'}
         <label className='number'>
-          {new BigNumberJS(tokenB).div(tokenA).toFixed(ROUNDED_NUMBER)}
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : new BigNumber(tokenB).div(tokenA).toFixed(ROUNDED_NUMBER)}
         </label>{' '}
         {tokenBLabel}
       </label>

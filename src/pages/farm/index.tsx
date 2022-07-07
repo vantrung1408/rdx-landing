@@ -1,11 +1,12 @@
 import React from 'react'
 import './index.css'
-import { ethers, BigNumber, utils, constants } from 'ethers'
+import { ethers, constants } from 'ethers'
 import { AmountInput, Button, Tab, Tabs } from '../../components'
 import { LP, RDX, CHEF } from '../../contracts'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import {
+  decimalsCorrector,
   formatCurrency,
   getAccount,
   requestSigner,
@@ -13,10 +14,7 @@ import {
 } from '../../utils/wallet'
 import { FormItem } from '../../utils/type'
 import { WalletStatus } from '../../components/wallet-status'
-import {
-  DECIMAL_PRECISION,
-  DECIMAL_PRECISION_IN_UNIT,
-} from '../../utils/constant'
+import { BigNumber } from 'bignumber.js'
 
 export interface FarmProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -24,12 +22,12 @@ export interface FarmProps {
 
 export const Farm = (props: FarmProps) => {
   const [info, setInfo] = React.useState({
-    rdl: BigNumber.from(0),
-    rdx: BigNumber.from(0),
-    deposited: BigNumber.from(0),
-    reward: BigNumber.from(0),
-    rdlDecimals: BigNumber.from(0),
-    rdxDecimals: BigNumber.from(0),
+    rdl: new BigNumber(0),
+    rdx: new BigNumber(0),
+    deposited: new BigNumber(0),
+    reward: new BigNumber(0),
+    rdlDecimals: new BigNumber(0),
+    rdxDecimals: new BigNumber(0),
     needApprove: false,
   })
   const [stake, setStake] = React.useState<FormItem>({
@@ -110,12 +108,12 @@ export const Farm = (props: FarmProps) => {
       // const pendingReward = BigNumber.from(0)
 
       setInfo({
-        deposited: deposited,
-        rdl: rdlBalance,
-        rdx: rdxBalance,
-        reward: pendingReward,
-        rdlDecimals: utils.parseUnits('1', rdlDecimals),
-        rdxDecimals: utils.parseUnits('1', rdxDecimals),
+        deposited: new BigNumber(deposited.toString()),
+        rdl: new BigNumber(rdlBalance.toString()),
+        rdx: new BigNumber(rdxBalance.toString()),
+        reward: new BigNumber(pendingReward.toString()),
+        rdlDecimals: new BigNumber(rdlDecimals.toString()),
+        rdxDecimals: new BigNumber(rdxDecimals.toString()),
         needApprove: allowance.lt(rdlBalance),
       })
       // toast.success('Success to connect your wallet and get info')
@@ -135,9 +133,7 @@ export const Farm = (props: FarmProps) => {
     let valid = false
     if (value && info.rdlDecimals.gt(0)) {
       try {
-        const parsedValue = info.rdlDecimals
-          .div(DECIMAL_PRECISION_IN_UNIT)
-          .mul(utils.parseUnits(value.toString(), DECIMAL_PRECISION))
+        const parsedValue = decimalsCorrector(value, info.rdlDecimals)
         valid = parsedValue.gt(0) && parsedValue.lte(comperator)
         if (parsedValue.gt(comperator)) {
           title = 'Insufficient balance'
@@ -159,9 +155,7 @@ export const Farm = (props: FarmProps) => {
         return
       }
       props.setLoading(true)
-      const value = info.rdlDecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(unStake.value.toString(), DECIMAL_PRECISION))
+      const value = decimalsCorrector(unStake.value, info.rdlDecimals)
       const chef = await getChef()
       // withdraw
       const tx = await chef.withdraw(value.toString())
@@ -201,18 +195,14 @@ export const Farm = (props: FarmProps) => {
         return
       }
       props.setLoading(true)
-      const value = info.rdlDecimals
-        .div(DECIMAL_PRECISION_IN_UNIT)
-        .mul(utils.parseUnits(stake.value.toString(), DECIMAL_PRECISION))
+      const value = decimalsCorrector(stake.value, info.rdlDecimals)
       const chef = await getChef()
       // deposit
-      console.log(value.toString())
       const tx = await chef.deposit(value.toString())
       await tx.wait()
       await loadInfo(false)
       toast.success(`Success, please check your deposited balance`)
     } catch (err) {
-      console.log(err)
       toast.error('Failed, please try again later!')
     } finally {
       props.setLoading(false)
@@ -302,7 +292,7 @@ export const Farm = (props: FarmProps) => {
           <Button
             disabled={!unStake.valid}
             type='button'
-            value='Unstake'
+            value={unStake.title}
             onClick={withdraw}
           />
           {info.reward.gt(0) && (
@@ -326,34 +316,3 @@ export const Farm = (props: FarmProps) => {
     </div>
   )
 }
-
-// <div className='wallet-info-container'>
-// {info.address ? (
-//   <>
-//     <label className='wallet-info'>
-//       Connected to: {info.address.substring(0, 30)}... <br />
-//       {/* RDX Balance: {info.rdx.div(info.rdxDecimals).toString()} RDX<br /> */}
-//     </label>
-//     <label className='wallet-info'>
-//       Pending reward:{' '}
-//       <label className='number'>
-//         {formatCurrency(info.reward, info.rdxDecimals)}
-//       </label>{' '}
-//       RDX{' '}
-//       {info.reward.div(info.rdxDecimals).gt(0) && (
-//         <label>
-//           (
-//           <a href='#' onClick={claim}>
-//             Claim
-//           </a>
-//           )
-//         </label>
-//       )}
-//     </label>
-//   </>
-// ) : (
-//   <a href='#' className='wallet-info' onClick={loadInfo}>
-//     Please click here to connect your wallet and continue
-//   </a>
-// )}
-// </div>

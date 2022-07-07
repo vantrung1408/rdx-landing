@@ -1,9 +1,6 @@
-import { ethers, Signer, BigNumber } from 'ethers'
-import { BigNumber as BigNumberJS } from 'bignumber.js'
+import { ethers, Signer } from 'ethers'
+import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from './constant'
-BigNumberJS.config({
-  CRYPTO: true,
-})
 
 export const requestSigner = async (): Promise<Signer> => {
   const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
@@ -12,13 +9,21 @@ export const requestSigner = async (): Promise<Signer> => {
   return signer
 }
 
-export const formatCurrency = (value: BigNumber, decimals: BigNumber) => {
-  const parsedDecimals = new BigNumberJS(decimals.toString())
+export const formatCurrency = (
+  value: BigNumber.Value,
+  decimals: BigNumber.Value
+) => {
+  if (!decimals) {
+    return value.toString()
+  }
+  const parsedDecimals = new BigNumber(decimals)
   if (parsedDecimals.eq(0)) {
     return '-'
   }
-  const parsedValue = new BigNumberJS(value.toString())
-  return parsedValue.div(parsedDecimals).toFormat(ROUNDED_NUMBER)
+  const parsedValue = new BigNumber(value)
+  return parsedValue
+    .div(new BigNumber(10).pow(parsedDecimals))
+    .toFormat(ROUNDED_NUMBER)
 }
 
 export const switchToCorrectNetwork = async () => {
@@ -36,4 +41,11 @@ export const switchToCorrectNetwork = async () => {
 export const getAccount = async () => {
   const accounts = await window.ethereum.request({ method: 'eth_accounts' })
   return accounts?.length ? accounts[0] : undefined
+}
+
+export const decimalsCorrector = (
+  value: BigNumber.Value,
+  decimals: BigNumber.Value
+) => {
+  return new BigNumber(value).multipliedBy(new BigNumber(10).pow(decimals))
 }
