@@ -2,7 +2,7 @@ import React from 'react'
 import './index.css'
 import { ethers, constants } from 'ethers'
 import { AmountInput, Button, Tab, Tabs } from '../../components'
-import { LP, RDX, CHEF } from '../../contracts'
+import { ROUTERV2, ERC20_ABI, CHEF } from '../../contracts'
 import { toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import {
@@ -12,12 +12,13 @@ import {
   requestSigner,
   switchToCorrectNetwork,
 } from '../../utils/wallet'
-import { FormItem } from '../../utils/type'
+import { FormItem, TokenSelectorState } from '../../utils/type'
 import { WalletStatus } from '../../components/wallet-status'
 import { BigNumber } from 'bignumber.js'
 
 export interface FarmProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
+  setTokenSelector: React.Dispatch<React.SetStateAction<TokenSelectorState>>
 }
 
 export const Farm = (props: FarmProps) => {
@@ -67,13 +68,13 @@ export const Farm = (props: FarmProps) => {
 
   const getLP = async () => {
     const signer = await requestSigner()
-    const lp = new ethers.Contract(LP.address, LP.abi, signer)
+    const lp = new ethers.Contract(ROUTERV2.address, ROUTERV2.abi, signer)
     return lp
   }
 
   const getRDX = async () => {
     const signer = await requestSigner()
-    const rdx = new ethers.Contract(RDX.address, RDX.abi, signer)
+    const rdx = new ethers.Contract('', ERC20_ABI, signer)
     return rdx
   }
 

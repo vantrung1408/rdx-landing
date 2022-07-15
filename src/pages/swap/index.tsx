@@ -6,19 +6,20 @@ import { constants, ethers } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import './index.css'
 import { WalletStatus } from '../../components/wallet-status'
-import { FormProps } from '../../utils/type'
+import { FormProps, TokenSelectorState } from '../../utils/type'
 import {
   decimalsCorrector,
   getAccount,
   requestSigner,
   switchToCorrectNetwork,
 } from '../../utils/wallet'
-import { LP, USDC, WETH } from '../../contracts'
+import { ROUTERV2, ERC20_ABI } from '../../contracts'
 import { toast } from 'react-toastify'
 import { ROUNDED_NUMBER } from '../../utils/constant'
 
 export interface SwapProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
+  setTokenSelector: React.Dispatch<React.SetStateAction<TokenSelectorState>>
 }
 
 export const Swap = (props: SwapProps) => {
@@ -51,7 +52,7 @@ export const Swap = (props: SwapProps) => {
         logo: ethIcon,
         contract: async () => {
           const signer = await requestSigner()
-          const tokenA = new ethers.Contract(WETH.address, WETH.abi, signer)
+          const tokenA = new ethers.Contract('', ERC20_ABI, signer)
           return tokenA
         },
       },
@@ -60,7 +61,7 @@ export const Swap = (props: SwapProps) => {
         logo: usdcIcon,
         contract: async () => {
           const signer = await requestSigner()
-          const tokenB = new ethers.Contract(USDC.address, USDC.abi, signer)
+          const tokenB = new ethers.Contract('', ERC20_ABI, signer)
           return tokenB
         },
       },
@@ -95,7 +96,7 @@ export const Swap = (props: SwapProps) => {
 
   const getLP = async () => {
     const signer = await requestSigner()
-    const lp = new ethers.Contract(LP.address, LP.abi, signer)
+    const lp = new ethers.Contract(ROUTERV2.address, ROUTERV2.abi, signer)
     return lp
   }
 

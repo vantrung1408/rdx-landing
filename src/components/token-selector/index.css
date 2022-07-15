@@ -1,0 +1,58 @@
+.token-selector-wrapper {
+  background-color: rgba(255, 255, 255, 0.75);
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.15);
+}
+
+.token-name-input {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.token-name-input .input {
+  text-align: left;
+  font-size: 14px;
+}
+
+.tokens-container {
+  background-color: rgba(255, 255, 255, 0.75);
+  border-radius: 6px;
+  margin: 4px 0 20px 0;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.token-item-container {
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: row;
+  justify-items: center;
+}
+
+.token-item-container.active {
+  background-color: rgb(250, 133, 78);
+}
+
+.token-item-logo {
+}
+
+.token-item-name {
+  font-family: 'Coda';
+}
+
+.token-selector-wrapper .button-base {
+  width: 100%;
+  padding: 10px 30px;
+}
+
+.no-matched {
+  text-align: center;
+  font-size: 12px;
+}
+
+.token-item-logo {
+  height: 16px;
+  margin-right: 8px;
+}

@@ -3,21 +3,18 @@ import './index.css'
 import { Input } from '../input'
 import { BigNumber } from 'bignumber.js'
 import { decimalsCorrector, formatCurrency } from '../../utils/wallet'
-
-export interface Token {
-  name: string
-  logo?: string
-}
+import { Token } from '../../utils/type'
 
 export interface AmountInputProps {
   balance?: BigNumber
   decimals?: BigNumber
-  token: Token
+  token?: Token
   onChange: (value: number) => any
   style?: any
   showBalanceInfo?: boolean
   renderBalanceInfo?: () => JSX.Element
   balanceInfoTitle?: string
+  onTokenClick?: (token?: Token) => any
   [key: string]: any
 }
 
@@ -30,6 +27,7 @@ export const AmountInput = function ({
   showBalanceInfo,
   renderBalanceInfo,
   balanceInfoTitle,
+  onTokenClick,
   ...inputProps
 }: AmountInputProps) {
   const percentage = [25, 50, 75, 100]
@@ -63,46 +61,54 @@ export const AmountInput = function ({
   return (
     <div className='amount-input-container' style={style}>
       <div className='amount-input-content-container'>
-        <div className='token-container'>
-          {token.logo && <img className='token-logo' src={token.logo} />}
-          <label className='token-name'>{token.name}</label>
+        <div
+          className='token-container'
+          onClick={() => {
+            onTokenClick && onTokenClick(token)
+          }}
+        >
+          {token?.logo && <img className='token-logo' src={token.logo} />}
+          <label className='token-name'>{token?.name || '?'}</label>
         </div>
         <Input
           {...inputProps}
           onChange={onInputChange}
           onKeyPress={onKeyPress}
+          disabled={!token}
         />
       </div>
-      <div className='balance-info-container'>
-        {showBalanceInfo && decimals ? (
-          renderBalanceInfo ? (
-            renderBalanceInfo()
+      {token && (
+        <div className='balance-info-container'>
+          {showBalanceInfo && decimals ? (
+            renderBalanceInfo ? (
+              renderBalanceInfo()
+            ) : (
+              <label className='wallet-info'>
+                {balanceInfoTitle || 'Balance'}:{' '}
+                <label className='number'>
+                  {balance ? formatCurrency(balance, decimals) : '-'}
+                </label>{' '}
+                {token.name}
+              </label>
+            )
           ) : (
-            <label className='wallet-info'>
-              {balanceInfoTitle || 'Balance'}:{' '}
-              <label className='number'>
-                {balance ? formatCurrency(balance, decimals) : '-'}
-              </label>{' '}
-              {token.name}
-            </label>
-          )
-        ) : (
-          <label />
-        )}
-        <div className='percentage-container'>
-          {percentage.map((percent) => (
-            <label
-              key={percent}
-              className='percent number'
-              onClick={() => {
-                changeByPercent(percent)
-              }}
-            >
-              {percent === 100 ? 'Max' : `${percent}%`}
-            </label>
-          ))}
+            <label />
+          )}
+          <div className='percentage-container'>
+            {percentage.map((percent) => (
+              <label
+                key={percent}
+                className='percent number'
+                onClick={() => {
+                  changeByPercent(percent)
+                }}
+              >
+                {percent === 100 ? 'Max' : `${percent}%`}
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

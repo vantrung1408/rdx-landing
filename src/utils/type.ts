@@ -14,3 +14,16 @@ export interface FormProps {
   tokenB: TokenInput
   title: string
 }
+
+export interface Token {
+  address?: string
+  name: string
+  logo?: string
+}
+
+export interface TokenSelectorState {
+  show: boolean
+  exclude?: string[]
+  callback?: (token: Token) => any
+  cancelCallback?: () => any
+}

@@ -252,18 +252,3 @@ export const ERC20_ABI = [
     type: 'function',
   },
 ]
-
-export const RDX = {
-  address: '0xb4246F91EFF3EF5E92213bDfb53448E737766f8F',
-  abi: ERC20_ABI,
-}
-
-export const WETH = {
-  address: '0x82b3aC3e827f8858aC1D02EFC21C55eDB853E318',
-  abi: ERC20_ABI,
-}
-
-export const USDC = {
-  address: '0x3779C3fDC26EDB10decCb48f9CD5851919810222',
-  abi: ERC20_ABI,
-}

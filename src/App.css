@@ -95,3 +95,25 @@ body {
   bottom: -14px;
   left: calc(50% - 12px);
 }
+
+.loading-container,
+.token-selector-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.315);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.loading-container {
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+.loading {
+  height: 128px;
+}

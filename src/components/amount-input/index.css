@@ -46,7 +46,7 @@
   text-transform: uppercase;
   font-weight: 600;
   font-family: 'Coda';
-  width: 32px;
+  min-width: 32px;
   text-align: center;
 }
 
@@ -75,7 +75,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 6px 12px 6px;
-  margin: 0 12px
+  margin: 0 12px;
 }
 
 .balance-info-container .wallet-info {

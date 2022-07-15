@@ -1,6 +1,7 @@
 import { ethers, Signer } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from './constant'
+import { ERC20_ABI, FACTORY, ROUTERV2 } from '../contracts'
 
 export const requestSigner = async (): Promise<Signer> => {
   const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
@@ -49,4 +50,28 @@ export const decimalsCorrector = (
   decimals: BigNumber.Value
 ) => {
   return new BigNumber(value).multipliedBy(new BigNumber(10).pow(decimals))
+}
+
+export const getRouter = async () => {
+  const signer = await requestSigner()
+  const router = new ethers.Contract(ROUTERV2.address, ROUTERV2.abi, signer)
+  return router
+}
+
+export const getTokenContract = async (address: string) => {
+  const signer = await requestSigner()
+  const contract = new ethers.Contract(address, ERC20_ABI, signer)
+  return contract
+}
+
+export const getPairAddress = async (
+  tokenAAddress: string,
+  tokenBAddress: string
+) => {
+  const signer = await requestSigner()
+  const router = await getRouter()
+  const factoryAddress = await router.factory()
+  const factory = new ethers.Contract(factoryAddress, FACTORY.abi, signer)
+  const pairAddress = await factory.getPair(tokenAAddress, tokenBAddress)
+  return pairAddress
 }
