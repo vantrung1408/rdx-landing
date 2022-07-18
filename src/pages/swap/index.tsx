@@ -16,6 +16,7 @@ import { toast } from 'react-toastify'
 import { Token, TokenSelectorState } from '../../utils/type'
 import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from '../../utils/constant'
+import { sleep } from '../../utils/utillities'
 
 export interface SwapProps {
   setLoading: React.Dispatch<React.SetStateAction<boolean>>
@@ -324,6 +325,17 @@ export const Swap = (props: SwapProps) => {
     })
   }
 
+  const revertPair = async () => {
+    setPair({
+      tokenA: pair.tokenB,
+      tokenB: pair.tokenA,
+    })
+    setInfo({
+      tokenA: info.tokenB,
+      tokenB: info.tokenA,
+    })
+  }
+
   const renderRatio = () => {
     if (!pair.tokenA || !pair.tokenB) {
       return
@@ -371,7 +383,7 @@ export const Swap = (props: SwapProps) => {
             style={{ marginBottom: 0 }}
             showBalanceInfo
           />
-          <img className='plus-icon' src={plusIcon} />
+          <div onClick={revertPair} className='arrow-icon'></div>
         </div>
         <AmountInput
           onTokenClick={(token) => {
