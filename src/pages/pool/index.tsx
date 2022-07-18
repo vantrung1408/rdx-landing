@@ -1,13 +1,20 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ethIcon from '../../img/eth.png'
 import usdcIcon from '../../img/usdc.png'
 import plusIcon from '../../img/plus.png'
-import { AmountInput, Button, Tab, Tabs } from '../../components'
+import {
+  AmountInput,
+  AmountInputOnChangeProps,
+  Button,
+  Tab,
+  Tabs,
+} from '../../components'
 import { constants, ethers } from 'ethers'
 import './index.css'
 import { WalletStatus } from '../../components/wallet-status'
 import {
   decimalsCorrector,
+  formatCurrency,
   getAccount,
   getPairAddress,
   getRouter,
@@ -17,7 +24,7 @@ import {
 } from '../../utils/wallet'
 import { ROUTERV2, ERC20_ABI, PAIR_ABI } from '../../contracts'
 import { toast } from 'react-toastify'
-import { FormProps, Token, TokenSelectorState } from '../../utils/type'
+import { Token, TokenInput, TokenSelectorState } from '../../utils/type'
 import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from '../../utils/constant'
 
@@ -26,54 +33,86 @@ export interface PoolProps {
   setTokenSelector: React.Dispatch<React.SetStateAction<TokenSelectorState>>
 }
 
+export interface PoolFormProps {
+  tokenA: AmountInputOnChangeProps
+  tokenB: AmountInputOnChangeProps
+  tokenLp: AmountInputOnChangeProps
+}
+
 export const Pool = (props: PoolProps) => {
+  const initialForm = {
+    tokenA: {
+      valid: false,
+      insufficient: false,
+    },
+    tokenB: {
+      valid: false,
+      insufficient: false,
+    },
+    tokenLp: {
+      valid: false,
+      insufficient: false,
+    },
+  }
   const [info, setInfo] = React.useState({
     tokenA: {
       balance: new BigNumber(0),
       decimals: new BigNumber(0),
-      needApprove: new BigNumber(0),
+      needApprove: false,
     },
     tokenB: {
       balance: new BigNumber(0),
       decimals: new BigNumber(0),
-      needApprove: new BigNumber(0),
+      needApprove: false,
+    },
+    tokenLp: {
+      balance: new BigNumber(0),
+      decimals: new BigNumber(0),
+      needApprove: false,
     },
   })
-  const [pooled, setPooled] = React.useState({
-    lp: new BigNumber(0),
+  const [reserves, setReserves] = React.useState({
     tokenA: new BigNumber(0),
     tokenB: new BigNumber(0),
   })
-  const [ratio, setRatio] = React.useState({
-    tokenA: 1,
-    tokenB: 1,
-  })
   const [poolHasDeposited, setPoolHasDeposited] = React.useState(false)
-  const [form, setForm] = React.useState({
-    add: {
-      tokenA: {
-        value: '',
-        valid: false,
-      },
-      tokenB: {
-        value: '',
-        valid: false,
-      },
-      title: 'Supply',
-    } as FormProps,
-    remove: {
-      tokenA: {
-        value: '',
-        valid: false,
-      },
-      title: 'Withdraw',
-    } as FormProps,
-  })
-  const [pair, setPair] = React.useState<{ tokenA?: Token; tokenB?: Token }>({
-    tokenA: undefined,
-    tokenB: undefined,
+  const [form, setForm] = React.useState<PoolFormProps>({ ...initialForm })
+  const [pair, setPair] = React.useState<{
+    tokenA: Token
+    tokenB: Token
+    tokenLp: Token
+  }>({
+    tokenA: { name: '' },
+    tokenB: { name: '' },
+    tokenLp: { name: '' },
   })
   const [ratioSwitcher, setRatioSwitcher] = React.useState(true)
+
+  useEffect(() => {
+    onPairChanged()
+  }, [pair.tokenA.address, pair.tokenB.address])
+
+  const onPairChanged = async () => {
+    try {
+      props.setLoading(true)
+      if (!pair.tokenA.address || !pair.tokenB.address) {
+        return
+      }
+      const address = await getPairAddress(
+        pair.tokenA.address,
+        pair.tokenB.address
+      )
+      pair.tokenLp = {
+        name: `${pair.tokenA.name} / ${pair.tokenB.name}`,
+        address: address,
+      }
+      await onTokenChange('tokenLp', pair.tokenLp)
+      await getPoolInfo(pair)
+    } catch {
+    } finally {
+      props.setLoading(false)
+    }
+  }
 
   const onTokenChange = async (slot: keyof typeof pair, value: Token) => {
     try {
@@ -81,29 +120,39 @@ export const Pool = (props: PoolProps) => {
       if (!value.address) {
         return
       }
-      const signer = await requestSigner()
-      const address = await signer.getAddress()
-      const contract = await getTokenContract(value.address)
-      const [balance, decimals, allowance] = await Promise.all([
-        contract.balanceOf(address),
-        contract.decimals(),
-        contract.allowance(address, ROUTERV2.address),
-      ])
-      setInfo({
-        ...info,
-        [slot]: {
-          ...info[slot],
-          balance: new BigNumber(balance.toString()),
-          decimals: new BigNumber(decimals.toString()),
-          needApprove: allowance.lt(balance),
-        },
-      })
-      const newPair = {
+      if (value.address === constants.AddressZero) {
+        setInfo({
+          ...info,
+          [slot]: {
+            ...info[slot],
+            balance: new BigNumber(0),
+            decimals: new BigNumber(0),
+            needApprove: false,
+          },
+        })
+      } else {
+        const signer = await requestSigner()
+        const address = await signer.getAddress()
+        const contract = await getTokenContract(value.address)
+        const [balance, decimals, allowance] = await Promise.all([
+          contract.balanceOf(address),
+          contract.decimals(),
+          contract.allowance(address, ROUTERV2.address),
+        ])
+        setInfo({
+          ...info,
+          [slot]: {
+            ...info[slot],
+            balance: new BigNumber(balance.toString()),
+            decimals: new BigNumber(decimals.toString()),
+            needApprove: allowance.lt(balance),
+          },
+        })
+      }
+      setPair({
         ...pair,
         [slot]: { ...value },
-      }
-      setPair(newPair)
-      await getPoolInfo(newPair)
+      })
     } catch {
     } finally {
       props.setLoading(false)
@@ -113,40 +162,29 @@ export const Pool = (props: PoolProps) => {
   const getPoolInfo = async (newPair: typeof pair) => {
     try {
       props.setLoading(true)
-      if (!newPair.tokenA?.address || !newPair.tokenB?.address) {
-        return
-      }
-      const pairAddress = await getPairAddress(
-        newPair.tokenA.address,
-        newPair.tokenB.address
-      )
+      const pairAddress = newPair.tokenLp.address
       let deposited = false
-      if (pairAddress !== constants.AddressZero) {
+      if (pairAddress && pairAddress !== constants.AddressZero) {
         const signer = await requestSigner()
-        const address = await signer.getAddress()
         const lp = new ethers.Contract(pairAddress, PAIR_ABI, signer)
-        const totalSupply = await lp.totalSupply()
+        const [totalSupply, token0, reserves] = await Promise.all([
+          lp.totalSupply(),
+          lp.token0(),
+          lp.getReserves(),
+        ])
         deposited = totalSupply.gt(0)
-
-        const token0 = await lp.token0()
-        const reserves = await lp.getReserves()
         const [reservesA, reservesB] =
           token0 === newPair.tokenA.address
             ? reserves
             : [reserves[1], reserves[0]]
-        setRatio({
-          tokenA: 1,
-          tokenB: reservesB.div(reservesA).toNumber(),
+        setReserves({
+          tokenA: new BigNumber(reservesA.toString()),
+          tokenB: new BigNumber(reservesB.toString()),
         })
-
-        const currentLP = new BigNumber(
-          (await lp.balanceOf(address)).toString()
-        )
-        const pooledRatio = currentLP.dividedBy(totalSupply.toString())
-        setPooled({
-          lp: currentLP,
-          tokenA: pooledRatio.multipliedBy(reservesA.toString()),
-          tokenB: pooledRatio.multipliedBy(reservesB.toString()),
+      } else {
+        setReserves({
+          tokenA: new BigNumber(0),
+          tokenB: new BigNumber(0),
         })
       }
       setPoolHasDeposited(deposited)
@@ -156,92 +194,47 @@ export const Pool = (props: PoolProps) => {
     }
   }
 
-  const onChangeAmountB = (
-    title: string,
-    formProps: FormProps,
-    value: number | '',
-    balanceA: BigNumber,
-    balanceB: BigNumber
-  ) => {
-    const { tokenA, tokenB } = formProps
-    if (poolHasDeposited) {
-      if (value && ratio.tokenB) {
-        tokenA.value = ((value * ratio.tokenA) / ratio.tokenB).toString()
-      } else {
-        tokenA.value = ''
-      }
-    }
-    tokenB.value = value.toString()
-    checkFormValidAndGenTitle(title, formProps, balanceA, balanceB)
+  const onChangeAmountLP = (props: AmountInputOnChangeProps) => {
+    form.tokenLp = props
     setForm({
       ...form,
     })
   }
 
-  const onChangeAmountA = (
-    title: string,
-    formProps: FormProps,
-    value: number | '',
-    balanceA: BigNumber,
-    balanceB: BigNumber
-  ) => {
-    const { tokenA, tokenB } = formProps
+  const onChangeAmountB = (props: AmountInputOnChangeProps) => {
     if (poolHasDeposited) {
-      if (value && ratio.tokenA) {
-        tokenB.value = ((value * ratio.tokenB) / ratio.tokenA).toString()
+      const { value } = props
+      if (value && !reserves.tokenB.eq(0)) {
+        form.tokenA.value = reserves.tokenA
+          .multipliedBy(value)
+          .div(reserves.tokenB)
+          .toNumber()
       } else {
-        tokenB.value = ''
+        form.tokenA.value = undefined
       }
     }
-    tokenA.value = value.toString()
-    checkFormValidAndGenTitle(title, formProps, balanceA, balanceB)
+    form.tokenB = props
     setForm({
       ...form,
     })
   }
 
-  const checkFormValidAndGenTitle = (
-    title: string,
-    formProps: FormProps,
-    balanceA: BigNumber,
-    balanceB: BigNumber
-  ) => {
-    if (!pair.tokenA || !pair.tokenB) {
-      return
-    }
-    const { tokenA, tokenB } = formProps
-    const data = [
-      {
-        ref: tokenA,
-        value: tokenA.value,
-        decimals: info.tokenA.decimals,
-        balance: balanceA,
-        name: pair.tokenA.name,
-      },
-      {
-        ref: tokenB,
-        value: tokenB.value,
-        decimals: info.tokenB.decimals,
-        balance: balanceB,
-        name: pair.tokenB.name,
-      },
-    ]
-    try {
-      for (let { ref, value, decimals, balance, name } of data) {
-        const parsedValue = decimalsCorrector(value, decimals)
-        ref.valid = !!value && balance.gte(parsedValue)
-        formProps.title = balance.lt(parsedValue)
-          ? `Insufficient ${name} balance`
-          : title
-        if (!ref.valid) {
-          break
-        }
+  const onChangeAmountA = (props: AmountInputOnChangeProps) => {
+    if (true) {
+      const { value } = props
+      if (value && !reserves.tokenA.eq(0)) {
+        form.tokenB.value = reserves.tokenB
+          .multipliedBy(value)
+          .div(reserves.tokenA)
+          .toNumber()
+      } else {
+        form.tokenB.value = undefined
       }
-    } catch {
-      tokenA.valid = false
-      tokenB.valid = false
-      formProps.title = title
     }
+    form.tokenA = props
+    setForm({
+      ...form,
+    })
   }
 
   const approve = async (slot: keyof typeof pair) => {
@@ -271,42 +264,19 @@ export const Pool = (props: PoolProps) => {
     }
   }
 
-  const resetForm = (title: string) => {
-    setForm({
-      ...form,
-      add: {
-        title: title,
-        tokenA: {
-          valid: false,
-          value: '',
-        },
-        tokenB: {
-          valid: false,
-          value: '',
-        },
-      },
-    })
-  }
-
   const supply = async () => {
     try {
       if (
-        !pair.tokenA?.name ||
-        !pair.tokenB?.name ||
-        !form.add.tokenA.valid ||
-        !form.add.tokenB.valid
+        !form.tokenA.valid ||
+        !form.tokenB.valid ||
+        !form.tokenA.value ||
+        !form.tokenB.value
       ) {
         return
       }
       props.setLoading(true)
-      const amountA = decimalsCorrector(
-        form.add.tokenA.value,
-        info.tokenA.decimals
-      )
-      const amountB = decimalsCorrector(
-        form.add.tokenB.value,
-        info.tokenB.decimals
-      )
+      const amountA = decimalsCorrector(form.tokenA.value, info.tokenA.decimals)
+      const amountB = decimalsCorrector(form.tokenB.value, info.tokenB.decimals)
       const signer = await requestSigner()
       const address = await signer.getAddress()
       const router = await getRouter()
@@ -315,8 +285,12 @@ export const Pool = (props: PoolProps) => {
         pair.tokenB.address,
         amountA.toString(),
         amountB.toString(),
-        poolHasDeposited ? amountA.multipliedBy(0.95).toString() : 0,
-        poolHasDeposited ? amountB.multipliedBy(0.95).toString() : 0,
+        poolHasDeposited
+          ? amountA.multipliedBy(0.95).decimalPlaces(0).toString()
+          : 0,
+        poolHasDeposited
+          ? amountB.multipliedBy(0.95).decimalPlaces(0).toString()
+          : 0,
         address,
         constants.MaxUint256
       )
@@ -324,102 +298,72 @@ export const Pool = (props: PoolProps) => {
       await onTokenChange('tokenA', pair.tokenA)
       await onTokenChange('tokenB', pair.tokenB)
       toast.success(
-        `Success, you supply ${form.add.tokenA.value} ${pair.tokenA.name}, ${form.add.tokenB.value} ${pair.tokenB.name} into the pool`
+        `Success, you supply ${form.tokenA.value} ${pair.tokenA.name}, ${form.tokenB.value} ${pair.tokenB.name} into the pool`
       )
     } catch (error) {
       toast.error('Failed, please try again later!')
     } finally {
       props.setLoading(false)
-      resetForm('Supply')
+      setForm({ ...initialForm })
     }
   }
 
   const withdraw = async () => {
     try {
-      if (
-        !pair.tokenA?.name ||
-        !pair.tokenB?.name ||
-        !form.remove.tokenA.valid ||
-        !form.remove.tokenB.valid
-      ) {
+      if (!form.tokenLp.valid || !form.tokenLp.value) {
         return
       }
       props.setLoading(true)
-      const amountA = decimalsCorrector(
-        form.remove.tokenA.value,
-        info.tokenA.decimals
+      const amountLP = decimalsCorrector(
+        form.tokenLp.value,
+        info.tokenLp.decimals
       )
-      const amountB = decimalsCorrector(
-        form.remove.tokenB.value,
-        info.tokenB.decimals
+      const amountAmin = amountLP
+        .div(info.tokenLp.balance)
+        .multipliedBy(reserves.tokenA)
+      const amountBmin = amountLP
+        .div(info.tokenLp.balance)
+        .multipliedBy(reserves.tokenB)
+      const signer = await requestSigner()
+      const address = await signer.getAddress()
+      const router = await getRouter()
+      const tx = await router.removeLiquidity(
+        pair.tokenA.address,
+        pair.tokenB.address,
+        amountLP.toString(),
+        amountAmin.multipliedBy(0.95).decimalPlaces(0).toString(),
+        amountBmin.multipliedBy(0.95).decimalPlaces(0).toString(),
+        address,
+        constants.MaxUint256
       )
-      //
+      await tx.wait()
+      await onTokenChange('tokenLp', pair.tokenLp)
       toast.success(
-        `Success, you withdraw ${form.remove.tokenA.value} ${pair.tokenA.name}, ${form.remove.tokenB.value} ${pair.tokenB.name} from the pool`
+        `Success, you withdraw ${form.tokenLp.value} ${pair.tokenLp.name} from the pool`
       )
-    } catch {
+    } catch (error) {
+      console.log(error)
       toast.error('Failed, please try again later!')
     } finally {
       props.setLoading(false)
-      resetForm('Withdraw')
+      console.log(initialForm)
+      setForm({ ...initialForm })
     }
-  }
-
-  const renderRatio = () => {
-    if (!pair.tokenA || !pair.tokenB) {
-      return
-    }
-    const tokenA = ratioSwitcher ? ratio.tokenA : ratio.tokenB
-    const tokenALabel = ratioSwitcher ? pair.tokenA.name : pair.tokenB.name
-    const tokenB = ratioSwitcher ? ratio.tokenB : ratio.tokenA
-    const tokenBLabel = ratioSwitcher ? pair.tokenB.name : pair.tokenA.name
-    return (
-      <label
-        className='rate-info'
-        onClick={() => {
-          setRatioSwitcher(!ratioSwitcher)
-        }}
-      >
-        <label className='number'>
-          {!tokenA || new BigNumber(tokenA).eq(0)
-            ? '-'
-            : new BigNumber(tokenA)
-                .div(tokenA)
-                .decimalPlaces(ROUNDED_NUMBER)
-                .toString()}
-        </label>{' '}
-        {tokenALabel} ={' '}
-        <label className='number'>
-          {!tokenA || new BigNumber(tokenA).eq(0)
-            ? '-'
-            : new BigNumber(tokenB)
-                .div(tokenA)
-                .decimalPlaces(ROUNDED_NUMBER)
-                .toString()}
-        </label>{' '}
-        {tokenBLabel}
-      </label>
-    )
   }
 
   const onTokenClick = (
     exclude: string[],
-    slot: keyof typeof pair,
-    title: string
+    slot: Exclude<keyof typeof pair, 'tokenLp'>
   ) => {
     props.setTokenSelector({
       show: true,
-      callback: (token) => {
-        setPair({
-          ...pair,
-          [slot]: token,
-        })
-        onTokenChange(slot, token)
-        resetForm(title)
+      callback: async (token) => {
         props.setTokenSelector({
           show: false,
           exclude: [],
         })
+        await onTokenChange(slot, token)
+        setForm({ ...initialForm })
       },
       cancelCallback: () => {
         props.setTokenSelector({
@@ -430,7 +374,78 @@ export const Pool = (props: PoolProps) => {
       exclude: exclude,
     })
   }
-  console.log(pooled.tokenA.toFormat(), pooled.tokenB.toFormat())
+
+  const calculateReceivedAmount = (
+    input: number,
+    decimals: BigNumber,
+    totalTokenAmount: BigNumber
+  ) => {
+    const value = decimalsCorrector(input, info.tokenLp.decimals)
+    return formatCurrency(
+      value.div(info.tokenLp.balance).multipliedBy(totalTokenAmount),
+      decimals
+    )
+  }
+
+  const renderRatio = () => {
+    if (!pair.tokenA || !pair.tokenB) {
+      return
+    }
+    const tokenA = ratioSwitcher ? reserves.tokenA : reserves.tokenB
+    const tokenALabel = ratioSwitcher ? pair.tokenA.name : pair.tokenB.name
+    const tokenB = ratioSwitcher ? reserves.tokenB : reserves.tokenA
+    const tokenBLabel = ratioSwitcher ? pair.tokenB.name : pair.tokenA.name
+    return (
+      <label
+        className='rate-info'
+        onClick={() => {
+          setRatioSwitcher(!ratioSwitcher)
+        }}
+      >
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0) ? '-' : '1'}
+        </label>{' '}
+        {tokenALabel} ={' '}
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : tokenB.div(tokenA).decimalPlaces(ROUNDED_NUMBER).toString()}
+        </label>{' '}
+        {tokenBLabel}
+      </label>
+    )
+  }
+
+  const renderEstimate = () => {
+    if (!form.tokenLp.value) {
+      return
+    }
+    return (
+      <div className='rate-info' style={{ textAlign: 'right' }}>
+        <p>
+          <label className='number'>
+            {calculateReceivedAmount(
+              form.tokenLp.value,
+              info.tokenA.decimals,
+              reserves.tokenA
+            )}
+          </label>{' '}
+          {pair.tokenA.name}
+        </p>
+        <p>
+          <label className='number'>
+            {calculateReceivedAmount(
+              form.tokenLp.value,
+              info.tokenB.decimals,
+              reserves.tokenB
+            )}
+          </label>{' '}
+          {pair.tokenB.name}
+        </p>
+      </div>
+    )
+  }
+
   const tabs: Tab[] = [
     {
       title: 'Add',
@@ -440,26 +455,14 @@ export const Pool = (props: PoolProps) => {
           <div className='pool-amount-input'>
             <AmountInput
               onTokenClick={(token) => {
-                onTokenClick(
-                  pair.tokenB ? [pair.tokenB?.name] : [],
-                  'tokenA',
-                  'Supply'
-                )
+                onTokenClick(pair.tokenB ? [pair.tokenB.name] : [], 'tokenA')
               }}
               balance={info.tokenA.balance}
               decimals={info.tokenA.decimals}
               token={pair.tokenA}
-              value={form.add.tokenA.value}
+              value={form.tokenA.value}
               placeholder='0.0'
-              onChange={(value) => {
-                onChangeAmountA(
-                  'Supply',
-                  form.add,
-                  value,
-                  info.tokenA.balance,
-                  info.tokenB.balance
-                )
-              }}
+              onChange={onChangeAmountA}
               style={{ marginBottom: 0 }}
               showBalanceInfo
             />
@@ -467,35 +470,23 @@ export const Pool = (props: PoolProps) => {
           </div>
           <AmountInput
             onTokenClick={(token) => {
-              onTokenClick(
-                pair.tokenA ? [pair.tokenA?.name] : [],
-                'tokenB',
-                'Supply'
-              )
+              onTokenClick(pair.tokenA ? [pair.tokenA.name] : [], 'tokenB')
             }}
             balance={info.tokenB.balance}
             decimals={info.tokenB.decimals}
             token={pair.tokenB}
-            value={form.add.tokenB.value}
+            value={form.tokenB.value}
             placeholder='0.0'
-            onChange={(value) => {
-              onChangeAmountB(
-                'Supply',
-                form.add,
-                value,
-                info.tokenA.balance,
-                info.tokenB.balance
-              )
-            }}
+            onChange={onChangeAmountB}
             showBalanceInfo
           />
-          {poolHasDeposited && ratio.tokenA && ratio.tokenB && (
+          {poolHasDeposited && reserves.tokenA && reserves.tokenB && (
             <div className='rate-container'>
               <label className='rate-info'>Rate</label>
               {renderRatio()}
             </div>
           )}
-          {info.tokenA.needApprove && pair.tokenA && (
+          {info.tokenA.needApprove && pair.tokenA.name && (
             <Button
               type='button'
               value={`Approve ${pair.tokenA.name}`}
@@ -504,7 +495,7 @@ export const Pool = (props: PoolProps) => {
               }}
             />
           )}
-          {info.tokenB.needApprove && pair.tokenB && (
+          {info.tokenB.needApprove && pair.tokenB.name && (
             <Button
               type='button'
               value={`Approve ${pair.tokenB.name}`}
@@ -515,9 +506,15 @@ export const Pool = (props: PoolProps) => {
           )}
           <Button
             type='button'
-            value={form.add.title}
+            value={
+              form.tokenA.insufficient
+                ? `Insufficient ${pair.tokenA.name} balance`
+                : form.tokenB.insufficient
+                ? `Insufficient ${pair.tokenB.name} balance`
+                : 'Supply'
+            }
             onClick={supply}
-            disabled={!form.add.tokenA.valid || !form.add.tokenB.valid}
+            disabled={!form.tokenA.valid || !form.tokenB.valid}
           />
         </div>
       ),
@@ -529,48 +526,47 @@ export const Pool = (props: PoolProps) => {
           <WalletStatus callback={async () => {}} />
           <AmountInput
             onTokenClick={(token) => {
-              // onTokenClick(
-              //   pair.tokenA ? [pair.tokenA?.name] : [],
-              //   'tokenB',
-              //   'Supply'
-              // )
-            }}
-            balance={pooled.lp}
-            decimals={info.tokenA.decimals}
-            token={{
-              name:
-                pair.tokenA?.name && pair.tokenB?.name
-                  ? `${pair.tokenA.name} / ${pair.tokenB.name}`
-                  : '',
-              logo: pair.tokenA?.logo,
-              address: pair.tokenA?.address,
-            }}
-            value={form.remove.tokenA.value}
-            placeholder='0.0'
-            onChange={(value) => {
-              onChangeAmountA(
-                'Withdraw',
-                form.remove,
-                value,
-                pooled.tokenA,
-                pooled.tokenB
+              onTokenClick(
+                pair.tokenA.name === token?.name
+                  ? [pair.tokenB.name]
+                  : [pair.tokenA.name],
+                pair.tokenA.name === token?.name ? 'tokenA' : 'tokenB'
               )
             }}
+            balance={info.tokenLp.balance}
+            decimals={info.tokenLp.decimals}
+            pair={[pair.tokenA, pair.tokenB]}
+            value={form.tokenLp.value}
+            placeholder='0.0'
+            onChange={onChangeAmountLP}
             style={{ marginBottom: 0 }}
             showBalanceInfo
           />
-          {/* {poolHasDeposited && ratio.tokenA && ratio.tokenB && (
+          {info.tokenLp.balance.gt(0) && form.tokenLp.value && (
             <div className='rate-container'>
-              <label className='rate-info'>Rate</label>
-              {renderRatio()}
+              <label className='rate-info'>Estimate receive amount</label>
+              {renderEstimate()}
             </div>
-          )} */}
-          {/* <Button
+          )}
+          {info.tokenLp.needApprove && (
+            <Button
+              type='button'
+              value={`Approve ${pair.tokenLp.name}`}
+              onClick={async () => {
+                approve('tokenLp')
+              }}
+            />
+          )}
+          <Button
             type='button'
-            value={form.remove.title}
+            value={
+              form.tokenLp.insufficient
+                ? `Insufficient ${pair.tokenLp.name} balance`
+                : 'Withdraw'
+            }
             onClick={withdraw}
-            disabled={!form.remove.tokenA.valid}
-          /> */}
+            disabled={!form.tokenLp.valid}
+          />
         </div>
       ),
     },

@@ -9,12 +9,6 @@ export interface TokenInput {
   valid: boolean
 }
 
-export interface FormProps {
-  tokenA: TokenInput
-  tokenB: TokenInput
-  title: string
-}
-
 export interface Token {
   address?: string
   name: string
