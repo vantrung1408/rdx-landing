@@ -1,6 +1,4 @@
 import React, { useEffect } from 'react'
-import ethIcon from '../../img/eth.png'
-import usdcIcon from '../../img/usdc.png'
 import plusIcon from '../../img/plus.png'
 import {
   AmountInput,
@@ -15,16 +13,14 @@ import { WalletStatus } from '../../components/wallet-status'
 import {
   decimalsCorrector,
   formatCurrency,
-  getAccount,
   getPairAddress,
   getRouter,
   getTokenContract,
   requestSigner,
-  switchToCorrectNetwork,
 } from '../../utils/wallet'
 import { ROUTERV2, ERC20_ABI, PAIR_ABI } from '../../contracts'
 import { toast } from 'react-toastify'
-import { Token, TokenInput, TokenSelectorState } from '../../utils/type'
+import { Token, TokenSelectorState } from '../../utils/type'
 import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from '../../utils/constant'
 

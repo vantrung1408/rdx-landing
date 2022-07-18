@@ -1,20 +1,20 @@
-import React from 'react'
-import ethIcon from '../../img/eth.png'
-import usdcIcon from '../../img/usdc.png'
-import { AmountInput, Button } from '../../components'
+import React, { useEffect } from 'react'
+import plusIcon from '../../img/plus.png'
+import { AmountInput, AmountInputOnChangeProps, Button } from '../../components'
 import { constants, ethers } from 'ethers'
-import { BigNumber } from 'bignumber.js'
 import './index.css'
 import { WalletStatus } from '../../components/wallet-status'
-import { TokenSelectorState } from '../../utils/type'
 import {
   decimalsCorrector,
-  getAccount,
+  getPairAddress,
+  getRouter,
+  getTokenContract,
   requestSigner,
-  switchToCorrectNetwork,
 } from '../../utils/wallet'
-import { ROUTERV2, ERC20_ABI } from '../../contracts'
+import { ROUTERV2, ERC20_ABI, PAIR_ABI } from '../../contracts'
 import { toast } from 'react-toastify'
+import { Token, TokenSelectorState } from '../../utils/type'
+import { BigNumber } from 'bignumber.js'
 import { ROUNDED_NUMBER } from '../../utils/constant'
 
 export interface SwapProps {
@@ -22,359 +22,404 @@ export interface SwapProps {
   setTokenSelector: React.Dispatch<React.SetStateAction<TokenSelectorState>>
 }
 
+export interface SwapFormProps {
+  tokenA: AmountInputOnChangeProps
+  tokenB: AmountInputOnChangeProps
+}
+
 export const Swap = (props: SwapProps) => {
-  // const [info, setInfo] = React.useState({
-  //   tokenA: new BigNumber(0),
-  //   tokenB: new BigNumber(0),
-  //   tokenADecimals: new BigNumber(0),
-  //   tokenBDecimals: new BigNumber(0),
-  //   needApproveTokenA: false,
-  //   needApproveTokenB: false,
-  //   amountA: new BigNumber(0),
-  //   amountB: new BigNumber(0),
-  //   k: new BigNumber(0),
-  // })
-  // const [form, setForm] = React.useState<FormProps>({
-  //   tokenA: {
-  //     value: '',
-  //     valid: false,
-  //   },
-  //   tokenB: {
-  //     value: '',
-  //     valid: false,
-  //   },
-  //   title: 'Swap',
-  // })
-  // const pairs = [
-  //   {
-  //     tokenA: {
-  //       name: 'WETH',
-  //       logo: ethIcon,
-  //       contract: async () => {
-  //         const signer = await requestSigner()
-  //         const tokenA = new ethers.Contract('', ERC20_ABI, signer)
-  //         return tokenA
-  //       },
-  //     },
-  //     tokenB: {
-  //       name: 'USDC',
-  //       logo: usdcIcon,
-  //       contract: async () => {
-  //         const signer = await requestSigner()
-  //         const tokenB = new ethers.Contract('', ERC20_ABI, signer)
-  //         return tokenB
-  //       },
-  //     },
-  //   },
-  // ]
-  // const [selected, setSelected] = React.useState(0)
-  // const [pair, setPair] = React.useState(pairs[selected])
-  // const [ratioSwitcher, setRatioSwitcher] = React.useState(true)
-  // const [pairSwitcher, setPairSwitcher] = React.useState(true)
+  const initialForm = {
+    tokenA: {
+      valid: false,
+      insufficient: false,
+    },
+    tokenB: {
+      valid: false,
+      insufficient: false,
+    },
+  }
+  const [info, setInfo] = React.useState({
+    tokenA: {
+      balance: new BigNumber(0),
+      decimals: new BigNumber(0),
+      needApprove: false,
+    },
+    tokenB: {
+      balance: new BigNumber(0),
+      decimals: new BigNumber(0),
+      needApprove: false,
+    },
+  })
+  const [ratio, setRatio] = React.useState({
+    tokenA: new BigNumber(1),
+    tokenB: new BigNumber(1),
+  })
+  const [poolHasDeposited, setPoolHasDeposited] = React.useState(false)
+  const [form, setForm] = React.useState<SwapFormProps>({ ...initialForm })
+  const [pair, setPair] = React.useState<{
+    tokenA: Token
+    tokenB: Token
+  }>({
+    tokenA: { name: '' },
+    tokenB: { name: '' },
+  })
+  const [ratioSwitcher, setRatioSwitcher] = React.useState(true)
+  const [swapFunction, setSwapFunction] = React.useState<
+    'swapExactTokensForTokens' | 'swapTokensForExactTokens'
+  >('swapExactTokensForTokens')
 
-  // React.useEffect(() => {
-  //   initState()
-  // }, [])
+  useEffect(() => {
+    onPairChanged()
+  }, [pair.tokenA.address, pair.tokenB.address])
 
-  // React.useEffect(() => {
-  //   loadInfo(false)
-  // }, [pair])
+  const onPairChanged = async () => {
+    try {
+      props.setLoading(true)
+      if (!pair.tokenA.address || !pair.tokenB.address) {
+        return
+      }
+      const address = await getPairAddress(
+        pair.tokenA.address,
+        pair.tokenB.address
+      )
+      const signer = await requestSigner()
+      const lp = new ethers.Contract(address, PAIR_ABI, signer)
+      const totalSupply = await lp.totalSupply()
+      setPoolHasDeposited(totalSupply.gt(0))
+    } catch {
+    } finally {
+      props.setLoading(false)
+    }
+  }
 
-  // const initState = async () => {
-  //   const connected = await getAccount()
-  //   if (!!connected) {
-  //     await loadInfo(true)
-  //   }
-  //   const handler = () => {
-  //     loadInfo(false)
-  //   }
-  //   window.ethereum.removeListener('accountsChanged', handler)
-  //   window.ethereum.removeListener('chainChanged', handler)
-  //   window.ethereum.on('accountsChanged', handler)
-  //   window.ethereum.on('chainChanged', handler)
-  // }
+  const onTokenChange = async (slot: keyof typeof pair, value: Token) => {
+    try {
+      props.setLoading(true)
+      if (!value.address) {
+        return
+      }
+      if (value.address === constants.AddressZero) {
+        setInfo({
+          ...info,
+          [slot]: {
+            ...info[slot],
+            balance: new BigNumber(0),
+            decimals: new BigNumber(0),
+            needApprove: false,
+          },
+        })
+      } else {
+        const signer = await requestSigner()
+        const address = await signer.getAddress()
+        const contract = await getTokenContract(value.address)
+        const [balance, decimals, allowance] = await Promise.all([
+          contract.balanceOf(address),
+          contract.decimals(),
+          contract.allowance(address, ROUTERV2.address),
+        ])
+        setInfo({
+          ...info,
+          [slot]: {
+            ...info[slot],
+            balance: new BigNumber(balance.toString()),
+            decimals: new BigNumber(decimals.toString()),
+            needApprove: allowance.lt(balance),
+          },
+        })
+      }
+      setPair({
+        ...pair,
+        [slot]: { ...value },
+      })
+    } catch {
+    } finally {
+      props.setLoading(false)
+    }
+  }
 
-  // const getLP = async () => {
-  //   const signer = await requestSigner()
-  //   const lp = new ethers.Contract(ROUTERV2.address, ROUTERV2.abi, signer)
-  //   return lp
-  // }
+  const onChangeAmountB = async (
+    onChangeProps: AmountInputOnChangeProps,
+    isUserTrigger: boolean
+  ) => {
+    if (!isUserTrigger) {
+      return
+    }
 
-  // const loadInfo = async (forceSwitchNetwork: boolean = false) => {
-  //   try {
-  //     props.setLoading(true)
-  //     if (forceSwitchNetwork) {
-  //       await switchToCorrectNetwork()
-  //     }
+    const { value } = onChangeProps
+    if (
+      poolHasDeposited &&
+      value &&
+      pair.tokenA.address &&
+      pair.tokenB.address
+    ) {
+      try {
+        props.setLoading(true)
+        const router = await getRouter()
+        const parsedValue = decimalsCorrector(value, info.tokenB.decimals)
+        const [amountIn] = await router.getAmountsIn(parsedValue.toString(), [
+          pair.tokenA.address,
+          pair.tokenB.address,
+        ])
+        form.tokenA.value = new BigNumber(amountIn.toString())
+          .div(new BigNumber(10).pow(info.tokenA.decimals))
+          .decimalPlaces(ROUNDED_NUMBER)
+          .toNumber()
+        setRatio({
+          tokenA: new BigNumber(form.tokenA.value).div(value),
+          tokenB: new BigNumber(1),
+        })
+        setSwapFunction('swapTokensForExactTokens')
+      } catch {
+        form.tokenA.value = undefined
+      } finally {
+        props.setLoading(false)
+      }
+    } else {
+      form.tokenA.value = undefined
+    }
+    form.tokenB = onChangeProps
+    setForm({
+      ...form,
+    })
+  }
 
-  //     const signer = await requestSigner()
-  //     const address = await signer.getAddress()
-  //     const [lp, tokenA, tokenB] = await Promise.all([
-  //       getLP(),
-  //       pair.tokenA.contract(),
-  //       pair.tokenB.contract(),
-  //     ])
-  //     // get tokenA balance
-  //     const [
-  //       tokenADecimals,
-  //       tokenABalance,
-  //       tokenAAllowance,
-  //       tokenBDecimals,
-  //       tokenBBalance,
-  //       tokenBAllowance,
-  //       amountA,
-  //       amountB,
-  //       k,
-  //     ] = await Promise.all([
-  //       tokenA.decimals(),
-  //       tokenA.balanceOf(address),
-  //       tokenA.allowance(address, lp.address),
-  //       tokenB.decimals(),
-  //       tokenB.balanceOf(address),
-  //       tokenB.allowance(address, lp.address),
-  //       pairSwitcher ? lp.amountA() : lp.amountB(),
-  //       pairSwitcher ? lp.amountB() : lp.amountA(),
-  //       lp.k(),
-  //     ])
-  //     // const pool: BigNumber[] = [BigNumber.from(0), BigNumber.from(0)]
-  //     setInfo({
-  //       tokenA: new BigNumber(tokenABalance.toString()),
-  //       tokenB: new BigNumber(tokenBBalance.toString()),
-  //       tokenADecimals: new BigNumber(tokenADecimals.toString()),
-  //       tokenBDecimals: new BigNumber(tokenBDecimals.toString()),
-  //       needApproveTokenA: tokenAAllowance.lt(tokenABalance),
-  //       needApproveTokenB: tokenBAllowance.lt(tokenBBalance),
-  //       amountA: new BigNumber(amountA.toString()),
-  //       amountB: new BigNumber(amountB.toString()),
-  //       k: new BigNumber(k.toString()),
-  //     })
-  //   } catch {
-  //     // toast.error('Failed to connect your wallet')
-  //   } finally {
-  //     props.setLoading(false)
-  //   }
-  // }
+  const onChangeAmountA = async (
+    onChangeProps: AmountInputOnChangeProps,
+    isUserTrigger: boolean
+  ) => {
+    if (!isUserTrigger) {
+      return
+    }
 
-  // const approve = async (contract: ethers.Contract) => {
-  //   try {
-  //     props.setLoading(true)
-  //     const lp = await getLP()
-  //     const tx = await contract.approve(
-  //       lp.address,
-  //       constants.MaxUint256.toString()
-  //     )
-  //     await tx.wait()
-  //     await loadInfo(false)
-  //     toast.success('Success, approved')
-  //   } catch {
-  //     toast.error('Failed, please try again later!')
-  //   } finally {
-  //     props.setLoading(false)
-  //   }
-  // }
+    const { value } = onChangeProps
+    if (
+      poolHasDeposited &&
+      value &&
+      pair.tokenA.address &&
+      pair.tokenB.address
+    ) {
+      try {
+        props.setLoading(true)
+        const router = await getRouter()
+        const parsedValue = decimalsCorrector(value, info.tokenA.decimals)
+        const [, amountOut] = await router.getAmountsOut(
+          parsedValue.toString(),
+          [pair.tokenA.address, pair.tokenB.address]
+        )
+        form.tokenB.value = new BigNumber(amountOut.toString())
+          .div(new BigNumber(10).pow(info.tokenB.decimals))
+          .decimalPlaces(ROUNDED_NUMBER)
+          .toNumber()
+        setRatio({
+          tokenA: new BigNumber(1),
+          tokenB: new BigNumber(form.tokenB.value).div(value),
+        })
+        setSwapFunction('swapExactTokensForTokens')
+      } catch {
+        form.tokenB.value = undefined
+      } finally {
+        props.setLoading(false)
+      }
+    } else {
+      form.tokenB.value = undefined
+    }
+    form.tokenA = onChangeProps
+    console.log(form.tokenA)
+    setForm({
+      ...form,
+    })
+  }
 
-  // const onChangeAmountA = (value: number | '') => {
-  //   let title: string = 'Swap'
-  //   if (value) {
-  //     const parsedValue = decimalsCorrector(value, info.tokenADecimals)
-  //     const valueB = calculateSwapInfo(parsedValue, info.amountA, info.amountB)
-  //     form.tokenA.valid = parsedValue.gt(0) && parsedValue.lte(info.tokenA)
-  //     form.tokenB.value = valueB
-  //       .div(new BigNumber(10).pow(info.tokenADecimals))
-  //       .decimalPlaces(ROUNDED_NUMBER)
-  //       .toString()
-  //     if (parsedValue.gt(info.tokenA)) {
-  //       title = `Insufficient ${pair.tokenA.name} balance`
-  //     }
-  //   } else {
-  //     form.tokenA.valid = false
-  //     form.tokenB.value = ''
-  //   }
-  //   form.title = title
-  //   form.tokenA.value = value.toString()
-  //   setForm({
-  //     ...form,
-  //   })
-  // }
+  const approve = async (slot: keyof typeof pair) => {
+    try {
+      props.setLoading(true)
+      const token = pair[slot]
+      if (!token || !token.address) {
+        return
+      }
+      const signer = await requestSigner()
+      const tokenContract = new ethers.Contract(
+        token.address,
+        ERC20_ABI,
+        signer
+      )
+      const tx = await tokenContract.approve(
+        ROUTERV2.address,
+        constants.MaxUint256.toString()
+      )
+      await tx.wait()
+      await onTokenChange(slot, token)
+      toast.success('Success, approved')
+    } catch {
+      toast.error('Failed, please try again later!')
+    } finally {
+      props.setLoading(false)
+    }
+  }
 
-  // const onChangeAmountB = (value: number | '') => {
-  //   if (value) {
-  //     const parsedValue = decimalsCorrector(value, info.tokenBDecimals)
-  //     const valueA = calculateSwapInfo(parsedValue, info.amountB, info.amountA)
-  //     form.tokenA.value = valueA
-  //       .div(new BigNumber(10).pow(info.tokenBDecimals))
-  //       .decimalPlaces(ROUNDED_NUMBER)
-  //       .toString()
-  //   } else {
-  //     form.tokenA.value = ''
-  //   }
-  //   form.tokenB.valid = true
-  //   form.tokenB.value = value.toString()
-  //   setForm({
-  //     ...form,
-  //   })
-  // }
+  const swap = async () => {
+    try {
+      if (!form.tokenA.valid || !form.tokenA.value || !form.tokenB.value) {
+        return
+      }
+      props.setLoading(true)
+      const amountA = decimalsCorrector(form.tokenA.value, info.tokenA.decimals)
+      const amountB = decimalsCorrector(form.tokenB.value, info.tokenB.decimals)
+      const signer = await requestSigner()
+      const address = await signer.getAddress()
+      const router = await getRouter()
+      if (swapFunction === 'swapExactTokensForTokens') {
+        const tx = await router.swapExactTokensForTokens(
+          amountA.toString(),
+          amountB.multipliedBy(0.95).decimalPlaces(0).toString(),
+          [pair.tokenA.address, pair.tokenB.address],
+          address,
+          constants.MaxUint256
+        )
+        await tx.wait()
+      } else {
+        const tx = await router.swapTokensForExactTokens(
+          amountA.toString(),
+          amountB.multipliedBy(1.05).decimalPlaces(0).toString(),
+          [pair.tokenA.address, pair.tokenB.address],
+          address,
+          constants.MaxUint256
+        )
+        await tx.wait()
+      }
+      await onTokenChange('tokenA', pair.tokenA)
+      await onTokenChange('tokenB', pair.tokenB)
+      toast.success(
+        `Success, you supply ${form.tokenA.value} ${pair.tokenA.name}, ${form.tokenB.value} ${pair.tokenB.name} into the pool`
+      )
+    } catch (error) {
+      toast.error('Failed, please try again later!')
+    } finally {
+      props.setLoading(false)
+      setForm({ ...initialForm })
+    }
+  }
 
-  // const calculateSwapInfo = (
-  //   value: BigNumber.Value,
-  //   x: BigNumber.Value,
-  //   y: BigNumber.Value
-  // ) => {
-  //   const parsedValue = new BigNumber(value)
-  //   const parsedX = new BigNumber(x)
-  //   const parsedY = new BigNumber(y)
-  //   if (parsedValue.eq(0) || parsedX.eq(0)) {
-  //     return new BigNumber(0)
-  //   }
-  //   const needed = parsedY.minus(info.k.div(parsedX.plus(parsedValue)))
-  //   return needed
-  // }
+  const onTokenClick = (
+    exclude: string[],
+    slot: Exclude<keyof typeof pair, 'tokenLp'>
+  ) => {
+    props.setTokenSelector({
+      show: true,
+      callback: async (token) => {
+        props.setTokenSelector({
+          show: false,
+          exclude: [],
+        })
+        await onTokenChange(slot, token)
+        setForm({ ...initialForm })
+      },
+      cancelCallback: () => {
+        props.setTokenSelector({
+          show: false,
+          exclude: [],
+        })
+      },
+      exclude: exclude,
+    })
+  }
 
-  // const swap = async () => {
-  //   try {
-  //     if (!form.tokenA.valid) {
-  //       return
-  //     }
-  //     props.setLoading(true)
-  //     const amount = decimalsCorrector(form.tokenA.value, info.tokenADecimals)
-  //     const minAmountOut = calculateSwapInfo(amount, info.amountA, info.amountB)
-  //       .multipliedBy(0.95) // slippage 0.5%
-  //       .toFixed(0)
-  //     const lp = await getLP()
-  //     const tokenA = await pair.tokenA.contract()
-  //     const tokenB = await pair.tokenB.contract()
-  //     const tx = await lp.swap(
-  //       tokenA.address,
-  //       tokenB.address,
-  //       amount.toString(),
-  //       minAmountOut.toString()
-  //     )
-  //     await tx.wait()
-  //     toast.success(
-  //       `Success, you swap from ${form.tokenA.value} ${pair.tokenA.name} to ${form.tokenB.value} ${pair.tokenB.name}`
-  //     )
-  //   } catch {
-  //     toast.error(
-  //       'Failed, please try again later or try refresh this page to fetch newest price!'
-  //     )
-  //   } finally {
-  //     props.setLoading(false)
-  //     onChangeAmountA('')
-  //     await loadInfo()
-  //   }
-  // }
+  const renderRatio = () => {
+    if (!pair.tokenA || !pair.tokenB) {
+      return
+    }
+    const tokenA = ratioSwitcher ? ratio.tokenA : ratio.tokenB
+    const tokenALabel = ratioSwitcher ? pair.tokenA.name : pair.tokenB.name
+    const tokenB = ratioSwitcher ? ratio.tokenB : ratio.tokenA
+    const tokenBLabel = ratioSwitcher ? pair.tokenB.name : pair.tokenA.name
+    return (
+      <label
+        className='rate-info'
+        onClick={() => {
+          setRatioSwitcher(!ratioSwitcher)
+        }}
+      >
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0) ? '-' : '1'}
+        </label>{' '}
+        {tokenALabel} ={' '}
+        <label className='number'>
+          {!tokenA || new BigNumber(tokenA).eq(0)
+            ? '-'
+            : tokenB.div(tokenA).decimalPlaces(ROUNDED_NUMBER).toString()}
+        </label>{' '}
+        {tokenBLabel}
+      </label>
+    )
+  }
 
-  // const revertPair = () => {
-  //   onChangeAmountA('')
-  //   setPair({
-  //     tokenA: pair.tokenB,
-  //     tokenB: pair.tokenA,
-  //   })
-  //   setPairSwitcher(!pairSwitcher)
-  // }
-
-  // const renderRatio = () => {
-  //   const tokenA = ratioSwitcher ? form.tokenA.value : form.tokenB.value
-  //   const tokenALabel = ratioSwitcher ? pair.tokenA.name : pair.tokenB.name
-  //   const tokenB = ratioSwitcher ? form.tokenB.value : form.tokenA.value
-  //   const tokenBLabel = ratioSwitcher ? pair.tokenB.name : pair.tokenA.name
-  //   return (
-  //     <label
-  //       className='rate-info'
-  //       onClick={() => {
-  //         setRatioSwitcher(!ratioSwitcher)
-  //       }}
-  //     >
-  //       <label className='number'>
-  //         {!tokenA || new BigNumber(tokenA).eq(0)
-  //           ? '-'
-  //           : new BigNumber(tokenA)
-  //               .div(tokenA)
-  //               .decimalPlaces(ROUNDED_NUMBER)
-  //               .toString()}
-  //       </label>{' '}
-  //       {tokenALabel} ={' ~'}
-  //       <label className='number'>
-  //         {!tokenA || new BigNumber(tokenA).eq(0)
-  //           ? '-'
-  //           : new BigNumber(tokenB)
-  //               .div(tokenA)
-  //               .decimalPlaces(ROUNDED_NUMBER)
-  //               .toString()}
-  //       </label>{' '}
-  //       {tokenBLabel}
-  //     </label>
-  //   )
-  // }
-
-  // return (
-  //   <div className='pool form-container'>
-  //     <div className='form-content-container'>
-  //       <WalletStatus callback={async () => {}} />
-  //       <div className='pool-amount-input'>
-  //         <AmountInput
-  //           balance={info.tokenA}
-  //           decimals={info.tokenADecimals}
-  //           token={{
-  //             name: pair.tokenA.name,
-  //             logo: pair.tokenA.logo,
-  //           }}
-  //           value={form.tokenA.value}
-  //           placeholder='0.0'
-  //           onChange={(value) => {
-  //             onChangeAmountA(value)
-  //           }}
-  //           style={{ marginBottom: 0 }}
-  //           showBalanceInfo
-  //         />
-  //         <div onClick={revertPair} className='arrow-icon'></div>
-  //       </div>
-  //       <AmountInput
-  //         balance={info.tokenB}
-  //         decimals={info.tokenBDecimals}
-  //         token={{
-  //           name: pair.tokenB.name,
-  //           logo: pair.tokenB.logo,
-  //         }}
-  //         value={form.tokenB.value}
-  //         placeholder='0.0'
-  //         onChange={(value) => {
-  //           onChangeAmountB(value)
-  //         }}
-  //         showBalanceInfo
-  //       />
-  //       {form.tokenA.value && form.tokenB.value && (
-  //         <div className='rate-container'>
-  //           <label className='rate-info'>Rate</label>
-  //           {renderRatio()}
-  //         </div>
-  //       )}
-  //       {info.needApproveTokenA && (
-  //         <Button
-  //           type='button'
-  //           value={`Approve ${pair.tokenA.name}`}
-  //           onClick={async () => {
-  //             approve(await pair.tokenA.contract())
-  //           }}
-  //         />
-  //       )}
-  //       {info.needApproveTokenB && (
-  //         <Button
-  //           type='button'
-  //           value={`Approve ${pair.tokenB.name}`}
-  //           onClick={async () => {
-  //             approve(await pair.tokenB.contract())
-  //           }}
-  //         />
-  //       )}
-  //       <Button
-  //         type='button'
-  //         value={form.title}
-  //         onClick={swap}
-  //         disabled={!form.tokenA.valid}
-  //       />
-  //     </div>
-  //   </div>
-  // )
-  return <></>
+  return (
+    <div className='pool form-container'>
+      <div className='form-content-container'>
+        <WalletStatus callback={async () => {}} />
+        <div className='pool-amount-input'>
+          <AmountInput
+            onTokenClick={(token) => {
+              onTokenClick(pair.tokenB ? [pair.tokenB.name] : [], 'tokenA')
+            }}
+            balance={info.tokenA.balance}
+            decimals={info.tokenA.decimals}
+            token={pair.tokenA}
+            value={form.tokenA.value || ''}
+            placeholder='0.0'
+            onChange={onChangeAmountA}
+            style={{ marginBottom: 0 }}
+            showBalanceInfo
+          />
+          <img className='plus-icon' src={plusIcon} />
+        </div>
+        <AmountInput
+          onTokenClick={(token) => {
+            onTokenClick(pair.tokenA ? [pair.tokenA.name] : [], 'tokenB')
+          }}
+          balance={info.tokenB.balance}
+          decimals={info.tokenB.decimals}
+          token={pair.tokenB}
+          value={form.tokenB.value || ''}
+          placeholder='0.0'
+          onChange={onChangeAmountB}
+          showBalanceInfo
+        />
+        {poolHasDeposited && form.tokenA.value && form.tokenA.value && (
+          <div className='rate-container'>
+            <label className='rate-info'>Rate</label>
+            {renderRatio()}
+          </div>
+        )}
+        {info.tokenA.needApprove && pair.tokenA.name && (
+          <Button
+            type='button'
+            value={`Approve ${pair.tokenA.name}`}
+            onClick={async () => {
+              approve('tokenA')
+            }}
+          />
+        )}
+        {info.tokenB.needApprove && pair.tokenB.name && (
+          <Button
+            type='button'
+            value={`Approve ${pair.tokenB.name}`}
+            onClick={async () => {
+              approve('tokenB')
+            }}
+          />
+        )}
+        <Button
+          type='button'
+          value={
+            form.tokenA.insufficient
+              ? `Insufficient ${pair.tokenA.name} balance`
+              : 'Swap'
+          }
+          onClick={swap}
+          disabled={!form.tokenA.valid}
+        />
+      </div>
+    </div>
+  )
 }

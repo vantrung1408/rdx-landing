@@ -20,13 +20,13 @@ function App() {
   })
   const location = useLocation()
   const routes = [
-    // {
-    //   title: 'Swap',
-    //   link: '/',
-    //   element: (
-    //     <Swap setLoading={setLoading} setTokenSelector={setTokenSelector} />
-    //   ),
-    // },
+    {
+      title: 'Swap',
+      link: '/',
+      element: (
+        <Swap setLoading={setLoading} setTokenSelector={setTokenSelector} />
+      ),
+    },
     // {
     //   title: 'Farm',
     //   link: '/farm',

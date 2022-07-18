@@ -8,7 +8,7 @@ import { BigNumber } from 'bignumber.js'
 BigNumber.config({
   CRYPTO: true,
   EXPONENTIAL_AT: 1e9,
-  ROUNDING_MODE: BigNumber.ROUND_DOWN,
+  // ROUNDING_MODE: BigNumber.ROUND_DOWN,
 })
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)

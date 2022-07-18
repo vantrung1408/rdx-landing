@@ -17,7 +17,7 @@ export interface AmountInputProps {
   decimals?: BigNumber
   token?: Token
   pair?: Token[]
-  onChange: (props: AmountInputOnChangeProps) => any
+  onChange: (props: AmountInputOnChangeProps, isUserTrigger: boolean) => any
   style?: any
   showBalanceInfo?: boolean
   renderBalanceInfo?: () => JSX.Element
@@ -47,24 +47,30 @@ export const AmountInput = function ({
       ? ''
       : inputProps.value
     if (parsedValue !== value) {
-      onInputChange({
-        target: {
-          value: parsedValue,
+      onInputChange(
+        {
+          target: {
+            value: parsedValue,
+          },
         },
-      })
+        true
+      )
     }
   }, [inputProps.value])
 
-  const onInputChange = (event: any) => {
+  const onInputChange = (event: any, triggerFromEffect: boolean) => {
     const value = event.target.value
     const isNan = isNaN(parseFloat(value))
     if (!balance || isNan) {
       setValue(value)
-      onChange({
-        value: value,
-        valid: !isNan,
-        insufficient: false,
-      })
+      onChange(
+        {
+          value: value,
+          valid: !isNan,
+          insufficient: false,
+        },
+        !triggerFromEffect
+      )
       return
     }
     if (!decimals) {
@@ -74,11 +80,14 @@ export const AmountInput = function ({
     const valid = !!value && balance.gte(parsedValue)
     const insufficient = balance.lt(parsedValue)
     setValue(value)
-    onChange({
-      value: value,
-      valid: valid,
-      insufficient: insufficient,
-    })
+    onChange(
+      {
+        value: value,
+        valid: valid,
+        insufficient: insufficient,
+      },
+      !triggerFromEffect
+    )
   }
 
   const changeByPercent = (percent: number) => {
@@ -90,11 +99,14 @@ export const AmountInput = function ({
       .div(100)
       .div(new BigNumber(10).pow(decimals))
       .toNumber()
-    onInputChange({
-      target: {
-        value: value,
+    onInputChange(
+      {
+        target: {
+          value: value,
+        },
       },
-    })
+      false
+    )
   }
 
   const onKeyPress = (event: any) => {
